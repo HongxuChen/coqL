@@ -83,7 +83,7 @@ Inductive day : Type :=
     Having defined [day], we can write functions that operate on
     days. *)
 
-Definition next_weekday (d:day) : day :=
+Definition next_weekday d :=
   match d with
   | monday    => tuesday
   | tuesday   => wednesday
