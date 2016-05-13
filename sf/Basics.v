@@ -1045,7 +1045,7 @@ Fixpoint addIt (n : nat) (m : nat) : nat :=
     | O => m
     | S n' => S (addIt (n-1) m)
   end.
-)
+*)
 
 (** [] *)
 
