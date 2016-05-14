@@ -636,13 +636,65 @@ Proof.
     here. 
 *)
 
-Fixpoint nat2bin (n:nat) :bin :=
+Fixpoint nat_to_bin (n:nat) :bin :=
   match n with
     | O => Z
-    | S n' => inc (nat2bin n')
+    | S n' => inc (nat_to_bin n')
   end.
 
-(* FILL IN HERE *)
+Theorem nat_bin_nat : forall n:nat,  (bin_to_nat (nat_to_bin n)) = n.
+Proof.
+  induction n as [|n'].
+  Case  "n=0". reflexivity.
+  Case "n=S n'". simpl. rewrite -> bin_to_nat_pres_incr. rewrite -> IHn'. reflexivity.
+Qed.
+
+Theorem nat_bin_pres_incr : forall n:nat, inc (nat_to_bin n) = nat_to_bin (S n).
+Proof.
+  induction n as [|n'].
+  Case "n=0". reflexivity.
+  Case "n=S n'". rewrite <- IHn'. reflexivity.
+  Qed.
+
+(* binary number has more than ONE prepsentation. For example, Z can also be
+ represented with "T Z", "T (T Z)" *)
+
+Definition twice (b:bin) :=
+  match b with
+   | Z => Z
+   | _ => T b
+  end.
+
+Fixpoint normalize (b:bin) : bin :=
+  match b with
+    | Z => Z
+    | T b' => twice (normalize b')
+    | M b' => inc (twice (normalize b'))
+  end.
+  
+Theorem inc_twice : forall b, inc (inc (twice b)) = twice (inc b).
+Proof.
+  induction b as [|b' |b'].
+  Case "b = Z". reflexivity.
+  Case "b = T b'". reflexivity.
+  Case "b = M b'". reflexivity.
+Qed.
+
+Theorem double_nat_to_bin_comm : forall n:nat, nat_to_bin (n*2) =twice (nat_to_bin n).
+Proof.
+  induction n as [|n'].
+  Case "n=0". reflexivity.
+  Case "n= S n'". simpl. rewrite <- inc_twice. rewrite IHn'. reflexivity.
+  Qed.
+
+Theorem bin_nat_bin : forall b:bin, (nat_to_bin (bin_to_nat b)) = normalize b.
+Proof.
+  induction b as [| b' | b'].
+  Case "b = Z". reflexivity. simpl.
+  Case "b = T b'". rewrite -> double_nat_to_bin_comm. rewrite -> IHb'. reflexivity.
+  Case "b = M b'". simpl. rewrite <- IHb'. rewrite -> double_nat_to_bin_comm. reflexivity.
+  Qed.
+
 (** [] *)
 
 (* ###################################################################### *)
@@ -750,8 +802,22 @@ Proof.
 (** Translate your solution for [plus_comm] into an informal proof. *)
 
 (** Theorem: Addition is commutative.
+_Theorem_: for any [n] and [m], n + m = m + n.
+_Proof_: by induction on [n].
+- First suppose [n = 0], we must show:
+    0 + m = m + 0
+  both sides equal to m since 0 is a nuetral element ([plus_0_n] and [plus_0_r]).
+- Suppose [n = S n'] with hypothesis
+    n' + m = m' + n
+  we must show:
+    S n' + m = m + S n'
+  By defintion, we should show:
+    S (n' + m) = m + S n'
+  By hypothesis, we should show:
+    S (m + n') = m + S n'
+  which is a conclusion of [plus_n_Sm].
+- Qed.
  
-    Proof: (* FILL IN HERE *)
 *)
 (** [] *)
 
@@ -760,9 +826,20 @@ Proof.
     informal proof of [plus_assoc] as a model.  Don't just
     paraphrase the Coq tactics into English!
  
-    Theorem: [true = beq_nat n n] for any [n].
+_Theorem_: [true = beq_nat n n] for any [n].
+_Proof_: By induction on [n].
+- First suppose [n = 0], we must show:
+    true = beq_nat 0 0
+  which is obvious.
+- Suppose [n = S n'], where:
+    true = beq_nat n' n'
+  we must show:
+    true = beq_nat (S n') (S n')
+  by defintion, this can be simplified as:
+    true = beq_nat n' n'
+  which is exactly the hypothesis.
+- Qed.
     
-    Proof: (* FILL IN HERE *) 
 [] *)
 
 (** $Date: 2014-12-31 15:31:47 -0500 (Wed, 31 Dec 2014) $ *)
