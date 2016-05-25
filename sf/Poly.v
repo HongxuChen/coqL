@@ -1132,11 +1132,9 @@ Proof. induction l as [| h l'].
      end.
    Write an informal proof of the following theorem:
    forall X n l, length l = n -> @index X n l = None.
-(* FILL IN HERE *)
- *)
+ (* See MoreCoq.v index_after_last *)
 Theorem index_length_none : forall X l n , length l = n -> @index X n l = None.
-Proof. intros x l. induction l as [| h l']. Abort.
-(* TODO *)
+ *)
 
 (** **** Exercise: 4 stars, advanced (church_numerals)  *)
 
@@ -1198,7 +1196,7 @@ Proof. reflexivity. Qed.
 (** Addition of two natural numbers *)
 
 Definition s_plus (n m : nat): nat :=  admit.
-Definition plus (n m :nat) := fun (X:Type) (f:X->X) (x:X) => m X f (n X f x).
+Definition plus (n m :nat) := fun X:Type) (f:X->X) (x:X) => m X f (n X f x).
 
 Example plus_1 : plus zero one = one.
 Proof. reflexivity. Qed.

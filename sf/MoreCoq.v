@@ -46,7 +46,7 @@ Theorem silly2 : forall (n m o p : nat),
      (forall (q r : nat), q = r -> [q;o] = [r;p]) ->
      [n;o] = [m;p].
 Proof.
-  intros n m o p eq1 eq2. 
+  intros n m o p eq1 eq2.
   apply eq2. apply eq1.  Qed.
 
 (** You may find it instructive to experiment with this proof
@@ -77,8 +77,8 @@ Theorem silly_ex :
      evenb 3 = true ->
      oddb 4 = true.
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+  intros.
+  apply H. apply H0. Qed.
 
 (** To use the [apply] tactic, the (conclusion of the) fact
     being applied must match the goal _exactly_ -- for example, [apply]
@@ -116,16 +116,14 @@ Theorem rev_exercise1 : forall (l l' : list nat),
      l = rev l' ->
      l' = rev l.
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+  intros. rewrite -> H. symmetry. apply rev_involutive. Qed.
 
 (** **** Exercise: 1 star, optional (apply_rewrite)  *)
 (** Briefly explain the difference between the tactics [apply] and
     [rewrite].  Are there situations where both can usefully be
     applied?
-  (* FILL IN HERE *)
+[apply] can be used in a universal qualifier but [rewrite] cannot. Basically [apply] rewrites the goal inreversibly but [rewrite] can always be reversed with no other tatics (both in hyphoses and goal). When the hypothesis is an equality, both can be used.
 *)
-(** [] *)
 
 
 (* ###################################################### *)
@@ -183,8 +181,7 @@ Example trans_eq_exercise : forall (n m o p : nat),
      (n + p) = m ->
      (n + p) = (minustwo o). 
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+  intros. apply trans_eq with m. assumption. assumption. Qed.
 
 
 (* ###################################################### *)
@@ -269,7 +266,8 @@ Example sillyex1 : forall (X : Type) (x y z : X) (l j : list X),
      y :: l = x :: j ->
      x = y.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros.
+  inversion H. inversion H0. symmetry. assumption. Qed.
 (** [] *)
 
 Theorem silly6 : forall (n : nat),
@@ -290,8 +288,7 @@ Example sillyex2 : forall (X : Type) (x y z : X) (l j : list X),
      y :: l = z :: j ->
      x = z.
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+  intros. inversion H. Qed.
 
 (** While the injectivity of constructors allows us to reason
     [forall (n m : nat), S n = S m -> n = m], the reverse direction of
@@ -303,8 +300,6 @@ Theorem f_equal : forall (A B : Type) (f: A -> B) (x y: A),
 Proof. intros A B f x y eq. rewrite eq.  reflexivity.  Qed. 
 
 
-
-
 (** **** Exercise: 2 stars, optional (practice)  *)
 (** A couple more nontrivial but not-too-complicated proofs to work
     together in class, or for you to work as exercises. *)
@@ -313,13 +308,13 @@ Proof. intros A B f x y eq. rewrite eq.  reflexivity.  Qed.
 Theorem beq_nat_0_l : forall n,
    beq_nat 0 n = true -> n = 0.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. induction n as [|n'].
+  reflexivity. inversion H.
+Qed.
 
 Theorem beq_nat_0_r : forall n,
    beq_nat n 0 = true -> n = 0.
-Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+Proof. intros. induction n as [|n']. reflexivity. inversion H. Qed.
 
 
 (* ###################################################### *)
@@ -345,10 +340,10 @@ Proof.
     [apply L in H] matches [H] against [L1] and, if successful,
     replaces it with [L2].
  
-    In other words, [apply L in H] gives us a form of "forward
-    reasoning" -- from [L1 -> L2] and a hypothesis matching [L1], it
+    In other words, [apply L in H] gives us a form of ["forward
+    reasoning"] -- from [L1 -> L2] and a hypothesis matching [L1], it
     gives us a hypothesis matching [L2].  By contrast, [apply L] is
-    "backward reasoning" -- it says that if we know [L1->L2] and we
+    ["backward reasoning"] -- it says that if we know [L1->L2] and we
     are trying to prove [L2], it suffices to prove [L1].  
 
     Here is a variant of a proof from above, using forward reasoning
@@ -370,7 +365,7 @@ Proof.
     goal, until premises or previously proven theorems are reached.
     If you've seen informal proofs before (for example, in a math or
     computer science class), they probably used forward reasoning.  In
-    general, Coq tends to favor backward reasoning, but in some
+    general, Coq tends to favor [backward reasoning], but in some
     situations the forward style can be easier to use or to think
     about.  *)
 
@@ -382,9 +377,16 @@ Theorem plus_n_n_injective : forall n m,
      n = m.
 Proof.
   intros n. induction n as [| n'].
-    (* Hint: use the plus_n_Sm lemma *)
-    (* FILL IN HERE *) Admitted.
-(** [] *)
+  (* n=0 *)
+  simpl. intros. destruct m as [|m'].
+  reflexivity.
+  inversion H.
+  (* n=S n' *)
+  simpl. rewrite <- plus_n_Sm. intros.
+  destruct m as [| m'].
+  inversion H.
+  simpl in H. rewrite <- plus_n_Sm in H. inversion H. apply IHn' in H1. apply f_equal. apply H1.
+  Qed.
 
 (* ###################################################### *)
 (** * Varying the Induction Hypothesis *)
@@ -529,16 +531,22 @@ Proof.
 Theorem beq_nat_true : forall n m,
     beq_nat n m = true -> n = m.
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+  intros n. induction n as [|n'].
+  Case "n=0".
+  destruct m as [|m'].
+  reflexivity.
+  simpl. intros. inversion H.
+  Case "n=S n'".
+  destruct m as [|m'].
+  simpl. intros. inversion H.
+  simpl. intros. apply f_equal. apply IHn' in H. assumption.
+Qed.
 
 (** **** Exercise: 2 stars, advanced (beq_nat_true_informal)  *)
 (** Give a careful informal proof of [beq_nat_true], being as explicit
     as possible about quantifiers. *)
 
-(* FILL IN HERE *)
-(** [] *)
-
+(* TODO *)
 
 (** The strategy of doing fewer [intros] before an [induction] doesn't
     always work directly; sometimes a little _rearrangement_ of
@@ -564,6 +572,8 @@ Abort.
     introduce [n].  (If we simply say [induction m] without
     introducing anything first, Coq will automatically introduce
     [n] for us!)   *)
+
+(* NOTE: this changes the induction order for 2nd "forall" Prop m rather 1st Prop n*)
 
 (** What can we do about this?  One possibility is to rewrite the
     statement of the lemma so that [m] is quantified before [n].  This
@@ -637,8 +647,6 @@ _Proof_: Let [m] be a [nat]. We prove by induction on [m] that, for
     m'].  Since [S n' = n] and [S m' = m], this is just what we wanted
     to show. [] *)
 
-
-
 (** Here's another illustration of [inversion] and using an
     appropriately general induction hypothesis.  This is a slightly
     roundabout way of stating a fact that we have already proved
@@ -692,8 +700,8 @@ Proof.
     Retaining the more general form of the induction hypothesis thus
     gives us more flexibility.
 
-    In general, a good rule of thumb is to make the induction hypothesis
-    as general as possible. *)
+    In general, a good rule of thumb is to [make the induction hypothesis
+    as general as possible]. *)
 
 (** **** Exercise: 3 stars (gen_dep_practice)  *)
 (** Prove this by induction on [l]. *)
@@ -702,8 +710,16 @@ Theorem index_after_last: forall (n : nat) (X : Type) (l : list X),
      length l = n ->
      index n l = None.
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+  intros n X l.
+  generalize dependent n.
+  induction l as [|h l'].
+  Case "l=[]".
+  intros. inversion H. simpl. reflexivity.
+  Case "l=h l'".
+  intros. destruct n as [|n'].
+  inversion H.
+  simpl. apply IHl'. inversion H. reflexivity.
+  Qed.
 
 (** **** Exercise: 3 stars, advanced, optional (index_after_last_informal)  *)
 (** Write an informal proof corresponding to your Coq proof
@@ -713,8 +729,7 @@ Proof.
       [n], if [length l = n] then [index n l = None].
  
      _Proof_:
-     (* FILL IN HERE *)
-[]
+ (* TODO  *)
 *)
 
 (** **** Exercise: 3 stars, optional (gen_dep_practice_more)  *)
@@ -725,8 +740,17 @@ Theorem length_snoc''' : forall (n : nat) (X : Type)
      length l = n ->
      length (snoc l v) = S n. 
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+  intros n X v l.
+  generalize dependent n.
+  generalize v.
+  induction l as [|h l'].
+  Case "l=[]".
+  intros. inversion H. simpl. reflexivity.
+  Case "l=h l'".
+  simpl. intros. destruct n as [|n'].
+  inversion H.
+  apply f_equal. apply IHl'. inversion H. reflexivity.
+Qed.
 
 (** **** Exercise: 3 stars, optional (app_length_cons)  *)
 (** Prove this by induction on [l1], without using [app_length]
@@ -737,8 +761,13 @@ Theorem app_length_cons : forall (X : Type) (l1 l2 : list X)
      length (l1 ++ (x :: l2)) = n ->
      S (length (l1 ++ l2)) = n.
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+  intros X l1 l2 x.
+  induction l1 as [|h1 l1'].
+  Case "l1=nil".
+  intros. rewrite <- H. reflexivity.
+  Case "l1=h1 l1'". simpl. intros. rewrite <- H. apply f_equal. apply IHl1'. reflexivity.
+  Qed.
+  (* KEY: n should kept by universal qualifier*)
 
 (** **** Exercise: 4 stars, optional (app_length_twice)  *)
 (** Prove this by induction on [l], without using app_length. *)
@@ -747,9 +776,17 @@ Theorem app_length_twice : forall (X:Type) (n:nat) (l:list X),
      length l = n ->
      length (l ++ l) = n + n.
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
-
+  intros X n l.
+  generalize dependent n.
+  induction l as [|h l'].
+  Case "l=[]".
+  simpl. intros. inversion H. reflexivity.
+  Case "l= h l'".
+  intros. destruct n as [|n'].
+  inversion H.
+  inversion H. simpl. rewrite -> plus_comm. rewrite -> plus_Sn_m. apply f_equal. rewrite <- IHl'. symmetry. apply app_length_cons with h. reflexivity.
+  reflexivity.
+  (* TODO review; KEY:"rewrite <- IHl"; and "apply with" *)
 
 (** **** Exercise: 3 stars, optional (double_induction)  *)
 (** Prove the following principle of induction over two naturals. *)
@@ -761,9 +798,16 @@ Theorem double_induction: forall (P : nat -> nat -> Prop),
   (forall m n, P m n -> P (S m) (S n)) ->
   forall m n, P m n.
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
-
+  intros P Proof_P00 H0 H1 H2.
+  intros m. induction m as [|m'].
+  Case "m=0".
+  induction n as [|n'].
+  assumption.
+  apply H1. assumption.
+  Case "m=S m'".
+  induction n as [|n']. apply H0. apply IHm'.
+  apply H2. apply IHm'.
+Qed.
 
 (* ###################################################### *)
 (** * Using [destruct] on Compound Expressions *)
