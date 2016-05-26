@@ -214,8 +214,7 @@ Proof.
 Theorem proj2 : forall P Q : Prop, 
   P /\ Q -> Q.
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+  intros. destruct H as [Hp Hq]. assumption. Qed.
 
 Theorem and_commut : forall P Q : Prop, 
   P /\ Q -> Q /\ P.
@@ -238,10 +237,11 @@ Theorem and_assoc : forall P Q R : Prop,
 Proof.
   intros P Q R H.
   destruct H as [HP [HQ HR]].
-(* FILL IN HERE *) Admitted.
-(** [] *)
-
-
+  split.
+  split. assumption.
+  assumption.
+  assumption.
+Qed.
 
 (* ###################################################### *)
 (** * Iff *)
@@ -277,13 +277,21 @@ Proof.
 
 Theorem iff_refl : forall P : Prop, 
   P <-> P.
-Proof. 
-  (* FILL IN HERE *) Admitted.
+Proof.
+  intros.
+  unfold iff. split.
+  intros. assumption.
+  intros. assumption.
+Qed.
 
 Theorem iff_trans : forall P Q R : Prop, 
   (P <-> Q) -> (Q <-> R) -> (P <-> R).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros P Q R PQ QR.
+  split.
+  intros. destruct PQ as [Hpq Hqp]. destruct QR as [Hqr Hrq]. apply Hqr. apply Hpq. assumption.
+  intros. destruct PQ as [Hpq Hqp]. destruct QR as [Hqr Hrq]. apply Hqp. apply Hrq. assumption.
+Qed.
 
 (** Hint: If you have an iff hypothesis in the context, you can use
     [inversion] to break it into two separate implications.  (Think
@@ -349,6 +357,7 @@ Proof.
 
 (** From here on, we'll use the shorthand tactics [left] and [right]
     in place of [apply or_introl] and [apply or_intror]. *)
+(* the ONLY case to use tatics [left] and [right]! *)
 
 Theorem or_commut' : forall P Q : Prop,
   P \/ Q  -> Q \/ P.
@@ -357,10 +366,6 @@ Proof.
   destruct H as [HP | HQ].
     Case "left". right. apply HP.
     Case "right". left. apply HQ.  Qed.
-
-
-
-
 
 Theorem or_distributes_over_and_1 : forall P Q R : Prop,
   P \/ (Q /\ R) -> (P \/ Q) /\ (P \/ R).
@@ -377,15 +382,26 @@ Proof.
 Theorem or_distributes_over_and_2 : forall P Q R : Prop,
   (P \/ Q) /\ (P \/ R) -> P \/ (Q /\ R).
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+  intros P Q R H.
+  destruct H as [PoQ PoR].
+  destruct PoQ as [pP|pQ].
+  Case "to prove P".
+  left. assumption.
+  destruct PoR as [pP'|pR].
+  Case "to prove P".
+  left. assumption.
+  Case "to prove Q and R".
+  right. split. assumption. assumption.
+Qed.
 
 (** **** Exercise: 1 star, optional (or_distributes_over_and)  *)
 Theorem or_distributes_over_and : forall P Q R : Prop,
   P \/ (Q /\ R) <-> (P \/ Q) /\ (P \/ R).
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+  intros. split.
+  intros. apply or_distributes_over_and_1. assumption.
+  intros. apply or_distributes_over_and_2. assumption.
+Qed.
 
 (* ################################################### *)
 (** ** Relating [/\] and [\/] with [andb] and [orb] *)

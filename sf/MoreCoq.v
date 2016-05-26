@@ -1242,6 +1242,8 @@ Proof.
   simpl. rewrite -> test_h_true. simpl. apply  IHl'.
 Qed.
 
+(* NOTE: similar conclusion DOES NOT hold for [forall] and [exists] Prop unless exclude-middle rule is introduced. *)
+
 (** $Date: 2014-12-31 16:01:37 -0500 (Wed, 31 Dec 2014) $ *)
 
 
