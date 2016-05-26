@@ -1196,7 +1196,7 @@ Proof. reflexivity. Qed.
 (** Addition of two natural numbers *)
 
 Definition s_plus (n m : nat): nat :=  admit.
-Definition plus (n m :nat) := fun X:Type) (f:X->X) (x:X) => m X f (n X f x).
+Definition plus (n m :nat) := fun (X:Type) (f:X->X) (x:X) => m X f (n X f x).
 
 Example plus_1 : plus zero one = one.
 Proof. reflexivity. Qed.

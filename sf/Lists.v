@@ -814,9 +814,8 @@ Proof.
   induction l as [|m l'].
   simpl. reflexivity.
   simpl.
-  rewrite -> IHl'.simpl. reflexivity.
+  rewrite -> IHl'. simpl. reflexivity.
   Qed.
-  
 
 Theorem rev_involutive : forall l : natlist,
   rev (rev l) = l.
