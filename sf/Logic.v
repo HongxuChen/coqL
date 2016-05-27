@@ -437,23 +437,35 @@ Proof.
 (** **** Exercise: 2 stars, optional (andb_false)  *)
 Theorem andb_false : forall b c,
   andb b c = false -> b = false \/ c = false.
-Proof. 
-  (* FILL IN HERE *) Admitted.
+Proof.
+  intros b c. destruct b, c.
+  simpl. intros. inversion H.
+  simpl. intros. right. assumption.
+  simpl. intros. left. assumption.
+  simpl. intros. left. assumption.
+Qed.
 
 (** **** Exercise: 2 stars, optional (orb_false)  *)
 Theorem orb_prop : forall b c,
   orb b c = true -> b = true \/ c = true.
 Proof.
-  (* FILL IN HERE *) Admitted.
-
+  intros. destruct b, c.
+  simpl in H. left. assumption.
+  simpl in H. left. assumption.
+  simpl in H. right. assumption.
+  simpl in H. right. assumption.
+Qed.
+  
 (** **** Exercise: 2 stars, optional (orb_false_elim)  *)
 Theorem orb_false_elim : forall b c,
   orb b c = false -> b = false /\ c = false.
-Proof. 
-  (* FILL IN HERE *) Admitted.
-(** [] *)
-
-
+Proof.
+  intros. destruct b, c.
+  simpl in H. inversion H.
+  simpl in H. inversion H.
+  simpl in H. inversion H.
+  simpl in H. split. assumption. assumption.
+Qed.
 
 (* ################################################### *)
 (** * Falsehood *)
@@ -520,8 +532,8 @@ Proof.
     intution is that [True] should be a proposition for which it is
     trivial to give evidence.) *)
 
-(* FILL IN HERE *)
-(** [] *)
+Inductive True :Prop := I : True.
+(* TODO review; differences between [Inductive] and [Fixpoint] *)
 
 (** However, unlike [False], which we'll use extensively, [True] is
     used fairly rarely. By itself, it is trivial (and therefore
@@ -572,36 +584,33 @@ Proof.
   (* WORKED IN CLASS *)
   intros P H. unfold not. intros G. apply G. apply H.  Qed.
 
+(* IMPORTANT! *)
+
 (** **** Exercise: 2 stars, advanced (double_neg_inf)  *)
 (** Write an informal proof of [double_neg]:
 
    _Theorem_: [P] implies [~~P], for any proposition [P].
 
-   _Proof_:
-(* FILL IN HERE *)
-   []
+   _Proof_:                     (* TODO *)
 *)
 
 (** **** Exercise: 2 stars (contrapositive)  *)
 Theorem contrapositive : forall P Q : Prop,
   (P -> Q) -> (~Q -> ~P).
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+  intros P Q PQ.
+  unfold not. intros. apply H. apply  PQ. assumption.
+Qed.
 
 (** **** Exercise: 1 star (not_both_true_and_false)  *)
 Theorem not_both_true_and_false : forall P : Prop,
   ~ (P /\ ~P).
-Proof. 
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+Proof. intros. unfold not. intros. destruct H. apply H0. apply H. Qed.
 
 (** **** Exercise: 1 star, advanced (informal_not_PNP)  *)
 (** Write an informal proof (in English) of the proposition [forall P
     : Prop, ~(P /\ ~P)]. *)
-
-(* FILL IN HERE *)
-(** [] *)
+(* TODO *)
 
 (** *** Constructive logic *)
 (** Note that some theorems that are true in classical logic are _not_
@@ -615,7 +624,8 @@ Proof.
   intros P H. unfold not in H. 
   (* But now what? There is no way to "invent" evidence for [~P] 
      from evidence for [P]. *) 
-  Abort.
+Abort.
+(* Be careful; the reverse holds as [double_neg] *)
 
 (** **** Exercise: 5 stars, advanced, optional (classical_axioms)  *)
 (** For those who like a challenge, here is an exercise
@@ -638,8 +648,36 @@ Definition de_morgan_not_and_not := forall P Q:Prop,
 Definition implies_to_or := forall P Q:Prop, 
   (P->Q) -> (~P\/Q). 
 
-(* FILL IN HERE *)
-(** [] *)
+Theorem peirce__classic : peirce -> classic.
+Proof.  unfold peirce. unfold classic. intros.
+        unfold not in H0. apply H with (Q:=False).
+        intros. apply H0 in H1. inversion H1. Qed.
+
+Theorem classic__excluded_middle : classic -> excluded_middle.
+Proof.
+  unfold classic. unfold excluded_middle. intros.
+  apply H. unfold not. intros. apply H0.
+  right. intros. destruct H0. left. assumption.
+Qed.
+
+Theorem excluded_middle__de_morgan_not_and_not : excluded_middle -> de_morgan_not_and_not.
+Proof.
+  unfold excluded_middle. unfold de_morgan_not_and_not. intros. unfold not in H0.
+  destruct (H P). left. assumption.
+  destruct (H Q). right. assumption.
+  destruct H0. split. assumption. assumption.
+Qed.
+
+Theorem de_morgan_not_and_not__implies_to_or : de_morgan_not_and_not -> implies_to_or.
+Proof.
+  unfold de_morgan_not_and_not. unfold implies_to_or. intros.
+Admitted.
+(* TODO proof *)
+
+Theorem implies_to_or__peirce : implies_to_or -> peirce.
+Proof. unfold implies_to_or. unfold peirce. intros.
+Admitted.
+(* TODO proof *)
 
 (** **** Exercise: 3 stars (excluded_middle_irrefutable)  *)
 (** This theorem implies that it is always safe to add a decidability
@@ -649,8 +687,9 @@ we would have both [~ (P \/ ~P)] and [~ ~ (P \/ ~P)], a contradiction. *)
 
 Theorem excluded_middle_irrefutable:  forall (P:Prop), ~ ~ (P \/ ~ P).  
 Proof.
-  (* FILL IN HERE *) Admitted.
-
+  intros. unfold not. intros. apply H. right.
+  intros. apply H. left. assumption.
+Qed.
 
 (* ########################################################## *)
 (** ** Inequality *)
@@ -679,31 +718,31 @@ Proof.
     apply H. reflexivity.   Qed.
 
 
-(** *** *)
-
-(** *** *)
-
-(** *** *)
-
-(** *** *)
-
-(** *** *)
-
 (** **** Exercise: 2 stars (false_beq_nat)  *)
 Theorem false_beq_nat : forall n m : nat,
      n <> m ->
      beq_nat n m = false.
-Proof. 
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+Proof.
+  intros n. unfold not. induction n.
+  intros. destruct m as [|m'].
+  destruct H. reflexivity. reflexivity.
+  intros. destruct m as [|m'].
+  reflexivity.
+  simpl. apply IHn. intros. apply H. apply f_equal. assumption.
+Qed.
 
 (** **** Exercise: 2 stars, optional (beq_nat_false)  *)
 Theorem beq_nat_false : forall n m,
   beq_nat n m = false -> n <> m.
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
-
-
+  intros n. unfold not. induction n as [|n'].
+  intros. destruct m as [|m']. inversion H. inversion H0.
+  intros. destruct m as [|m'].
+  inversion H0.
+  inversion H. apply IHn' in H2.
+  assumption.
+  inversion H0. reflexivity.
+  Qed.
+  
 (** $Date: 2014-12-31 11:17:56 -0500 (Wed, 31 Dec 2014) $ *)
 
