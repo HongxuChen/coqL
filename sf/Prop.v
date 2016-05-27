@@ -51,9 +51,10 @@ Inductive ev : nat -> Prop :=
 Theorem double_even : forall n,
   ev (double n).
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
-
+  intros. induction n as [|n'].
+  simpl. apply ev_0.
+  simpl. apply ev_SS. apply IHn'.
+Qed.
 
 
 (* ##################################################### *)
@@ -137,9 +138,7 @@ Proof.
 
 (** **** Exercise: 1 star (varieties_of_beauty)  *)
 (** How many different ways are there to show that [8] is [beautiful]? *)
-
-(* FILL IN HERE *)
-(** [] *)
+(* 2 *)
 
 (* ####################################################### *)
 (** ** Constructing Evidence *)
@@ -193,15 +192,18 @@ Qed.
 (** **** Exercise: 2 stars (b_times2)  *)
 Theorem b_times2: forall n, beautiful n -> beautiful (2*n).
 Proof.
-    (* FILL IN HERE *) Admitted.
-(** [] *)
+  intros.
+  simpl. rewrite <- plus_n_O. apply b_sum. assumption. assumption.
+Qed.
 
 (** **** Exercise: 3 stars (b_timesm)  *)
 Theorem b_timesm: forall n m, beautiful n -> beautiful (m*n).
 Proof.
-   (* FILL IN HERE *) Admitted.
-(** [] *)
-
+  intros.
+  induction m as [|m'].
+  simpl. apply b_0.
+  simpl. apply b_sum. assumption. assumption.
+Qed.
 
 (* ####################################################### *)
 (** * Using Evidence in Proofs *)
@@ -243,25 +245,31 @@ Inductive gorgeous : nat -> Prop :=
 (** **** Exercise: 1 star (gorgeous_tree)  *)
 (** Write out the definition of [gorgeous] numbers using inference rule
     notation.
- 
-(* FILL IN HERE *)
-[]
+
+   ----------------   (g_0)
+    gorgeous 0
+
+    gorgeous n
+   ----------------   (g_plus3)
+    gorgeous (3+n)
+
+    gorgeous n
+   ----------------   (g_plus5)
+    gorgeous (5+n)
+
 *)
 
 
 (** **** Exercise: 1 star (gorgeous_plus13)  *)
 Theorem gorgeous_plus13: forall n, 
   gorgeous n -> gorgeous (13+n).
-Proof.
-   (* FILL IN HERE *) Admitted.
-(** [] *)
+Proof.  intros.  apply g_plus5.  apply g_plus5.  apply g_plus3.  assumption. Qed.
 
 (** *** *)
 (** It seems intuitively obvious that, although [gorgeous] and
     [beautiful] are presented using slightly different rules, they are
     actually the same property in the sense that they are true of the
     same numbers.  Indeed, we can prove this. *)
-
 
 Theorem gorgeous__beautiful_FAILED : forall n, 
   gorgeous n -> beautiful n.
@@ -278,7 +286,6 @@ Abort.
     have induction hypotheses that mention other numbers, such as [n -
     3] and [n - 5]. This is given precisely by the shape of the
     constructors for [gorgeous]. *)
-
 
 (** *** *)
 
@@ -299,6 +306,8 @@ Proof.
        apply b_sum. apply b_5. apply IHgorgeous. 
 Qed.
 
+(* induction can be used for structural definitions *)
+
 
 (* These exercises also require the use of induction on the evidence. *)
 
@@ -306,33 +315,42 @@ Qed.
 Theorem gorgeous_sum : forall n m,
   gorgeous n -> gorgeous m -> gorgeous (n + m).
 Proof.
- (* FILL IN HERE *) Admitted.
-(** [] *)
+  intros n m Hn Hm.
+  induction Hn as [|n'|n'].
+  simpl. assumption.
+  rewrite <- plus_assoc. apply g_plus3. assumption.
+  rewrite <- plus_assoc. apply g_plus5. assumption.
+Qed.
 
 (** **** Exercise: 3 stars, advanced (beautiful__gorgeous)  *)
 Theorem beautiful__gorgeous : forall n, beautiful n -> gorgeous n.
 Proof.
- (* FILL IN HERE *) Admitted.
-(** [] *)
-
-
-
+  intros.
+  induction H.
+  apply g_0.
+  apply g_plus3. apply g_0.
+  apply g_plus5. apply g_0.
+  generalize dependent IHbeautiful2.
+  generalize dependent IHbeautiful1.
+  apply gorgeous_sum.
+  Qed.
 
 (** **** Exercise: 3 stars, optional (g_times2)  *)
 (** Prove the [g_times2] theorem below without using [gorgeous__beautiful].
     You might find the following helper lemma useful. *)
 
 Lemma helper_g_times2 : forall x y z, x + (z + y) = z + x + y.
-Proof.
-   (* FILL IN HERE *) Admitted.
+Proof.  intros. rewrite -> plus_assoc. rewrite -> (plus_comm z x). reflexivity. Qed.
 
 Theorem g_times2: forall n, gorgeous n -> gorgeous (2*n).
 Proof.
    intros n H. simpl. 
    induction H.
-   (* FILL IN HERE *) Admitted.
-(** [] *)
-
+   simpl. apply g_0.
+   apply g_plus3. apply gorgeous_sum. assumption. apply g_plus3. apply gorgeous_sum. assumption.
+  apply g_0.
+  apply g_plus5. apply gorgeous_sum. assumption. apply g_plus5. apply gorgeous_sum. assumption. apply g_0.
+Qed.
 
 
 (** Here is a proof that the inductive definition of evenness implies

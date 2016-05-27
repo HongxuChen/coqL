@@ -109,9 +109,13 @@ Qed.
 
 Theorem dist_not_exists : forall (X:Type) (P : X -> Prop),
   (forall x, P x) -> ~ (exists x, ~ P x).
-Proof. 
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+Proof.
+  intros.
+  unfold not. intros.
+  inversion H0. apply H1. apply H.
+Qed.
+
+(* KEY: [inversion] *)
 
 (** **** Exercise: 3 stars, optional (not_exists_dist)  *)
 (** (The other direction of this theorem requires the classical "law
@@ -122,8 +126,15 @@ Theorem not_exists_dist :
   forall (X:Type) (P : X -> Prop),
     ~ (exists x, ~ P x) -> (forall x, P x).
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+  unfold excluded_middle. unfold not.
+  intros.
+  destruct (H (P x)).
+  assumption.
+  contradiction H0. exists x. assumption.
+Qed.
+
+(* TODO review *)
+(* not_exists => dist requires excluded_middle *)
 
 (** **** Exercise: 2 stars (dist_exists_or)  *)
 (** Prove that existential quantification distributes over
@@ -132,8 +143,13 @@ Proof.
 Theorem dist_exists_or : forall (X:Type) (P Q : X -> Prop),
   (exists x, P x \/ Q x) <-> (exists x, P x) \/ (exists x, Q x).
 Proof.
-   (* FILL IN HERE *) Admitted.
-(** [] *)
+  intros. unfold iff. split.
+  intros. destruct H. destruct H.
+  left. exists witness. assumption.
+  right. exists witness. assumption.
+  intros. destruct H. destruct H. exists witness. left. assumption.
+  intros. destruct H. exists witness. right. assumption.
+Qed.  
 
 (* ###################################################### *)
 (** * Evidence-Carrying Booleans *)
@@ -235,12 +251,12 @@ Proof.
 Theorem override_shadow' : forall (X:Type) x1 x2 k1 k2 (f : nat->X),
   (override' (override' f k1 x2) k1 x1) k2 = (override' f k1 x1) k2.
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
-
-
-
-
+  intros.
+  unfold override'.
+  destruct (eq_nat_dec k1 k2).
+  reflexivity.
+  reflexivity.
+Qed.
 
 (* ####################################################### *)
 (** * Additional Exercises *)
@@ -251,8 +267,10 @@ Proof.
     asserts that [P] is true for every element of the list [l]. *)
 
 Inductive all (X : Type) (P : X -> Prop) : list X -> Prop :=
-  (* FILL IN HERE *)
-.
+| all_vacous : all X P []
+| all_holds : forall (x:X) (xs:list X), P x -> all X P xs -> all X P (x::xs).
+
+(* TODO review *)
 
 (** Recall the function [forallb], from the exercise
     [forall_exists_challenge] in chapter [Poly]: *)
@@ -270,8 +288,22 @@ Fixpoint forallb {X : Type} (test : X -> bool) (l : list X) : bool :=
     Are there any important properties of the function [forallb] which
     are not captured by your specification? *)
 
-(* FILL IN HERE *)
-(** [] *)
+Theorem forall_hods : forall {X:Type} (test:X->bool)(xs:list X), forallb test xs = true <-> all X (fun x => test x = true) xs.
+Proof.
+  intros. split.
+  (* -> *)
+  induction xs as [|h t].
+  simpl. intros. apply all_vacous.
+  simpl. intros.
+  assert (Hh : test h = true). apply andb_true_elim1 in H. assumption.
+  assert (Ht : forallb test t = true). apply andb_true_elim2 in H. assumption.
+  apply IHt in Ht. apply all_holds. assumption. assumption.
+  (* <- *)
+  intros. induction xs as [|h t].
+  reflexivity.
+  simpl. inversion H. apply IHt in H3.
+  rewrite -> H2. rewrite ->  H3. reflexivity.
+Qed.
 
 (** **** Exercise: 4 stars, advanced (filter_challenge)  *)
 (** One of the main purposes of Coq is to prove that programs match
@@ -298,8 +330,20 @@ Fixpoint forallb {X : Type} (test : X -> bool) (l : list X) : bool :=
     for one list to be a merge of two others.  Do this with an
     inductive relation, not a [Fixpoint].)  *)
 
-(* FILL IN HERE *)
-(** [] *)
+Inductive in_order_merge {X:Type}: list X -> list X -> list X -> Prop :=
+                          | merge_nil: in_order_merge [] [] []
+                          | merge1: forall x l1 l2 l3, in_order_merge l1 l2 l3 -> in_order_merge (x::l1) l2 (x::l3)
+                          | merge2: forall x l1 l2 l3, in_order_merge l1 l2 l3 -> in_order_merge l1 (x::l2) (x::l3).
+
+Theorem filter_challenge_1 : forall {X:Type} (l1 l2 l3 : list X) (test:X->bool),
+                         in_order_merge l1 l2 l3 -> forallb test l1 = true ->
+                         forallb (fun x => (negb (test x))) l2 = true ->
+                         filter test l3 = l1.
+Proof.
+  intros. destruct H as [|x1 l11 l21 l31 | x2 l12 l22 l32].
+Admitted.
+
+(* TODO proof *)
 
 (** **** Exercise: 5 stars, advanced, optional (filter_challenge_2)  *)
 (** A different way to formally characterize the behavior of [filter]
@@ -307,8 +351,15 @@ Fixpoint forallb {X : Type} (test : X -> bool) (l : list X) : bool :=
     that [test] evaluates to [true] on all their members, [filter test
     l] is the longest.  Express this claim formally and prove it. *)
 
-(* FILL IN HERE *)
-(** [] *)
+Inductive subseq {X:Type} : list X -> list X -> Prop :=
+|subseq_nil : forall l, subseq nil l
+| subseq_cons : forall x l1 l2, subseq (x::l1) (x::l2)
+| subseq_skip : forall x l1 l2, subseq l1 (x::l2).
+
+Theorem filter_challenge_2 : forall (X:Type) (l1 l2: list X) (test:X->bool),
+                               subseq l1 l2 -> forallb test l1 = true ->
+                               ble_nat (length l1) (length (filter test l2)) = true.
+  Proof. Admitted.
 
 (** **** Exercise: 4 stars, advanced (no_repeats)  *)
 (** The following inductively defined proposition... *)
