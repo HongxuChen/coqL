@@ -43,14 +43,14 @@ Proof.
     few minor differences are worth noting.  First, in the induction
     step of the proof (the ["S"] case), we have to do a little
     bookkeeping manually (the [intros]) that [induction] does
-    automatically.
+    automatically.              (* manually simplify *)
 
     Second, we do not introduce [n] into the context before applying
     [nat_ind] -- the conclusion of [nat_ind] is a quantified formula,
     and [apply] needs this conclusion to exactly match the shape of
     the goal state, including the quantifier.  The [induction] tactic
     works either with a variable in the context or a quantified
-    variable in the goal.
+    variable in the goal.       (* don't introduce *)
 
     Third, the [apply] tactic automatically chooses variable names for
     us (in the second subgoal, here), whereas [induction] lets us
@@ -64,7 +64,7 @@ Proof.
     make [induction] nicer to use in practice than applying induction
     principles like [nat_ind] directly.  But it is important to
     realize that, modulo this little bit of bookkeeping, applying
-    [nat_ind] is what we are really doing. *)
+    [nat_ind] is what we are really doing. *) (* internally *)
 
 (** **** Exercise: 2 stars, optional (plus_one_r')  *)
 (** Complete this proof as we did [mult_0_r'] above, without using
@@ -73,8 +73,10 @@ Proof.
 Theorem plus_one_r' : forall n:nat, 
   n + 1 = S n.
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+  apply nat_ind.
+  reflexivity.
+  simpl. intros. rewrite -> H. reflexivity.
+Qed.
 
 (** Coq generates induction principles for every datatype defined with
     [Inductive], including those that aren't recursive. (Although 
@@ -113,11 +115,14 @@ Check yesno_ind.
     following datatype.  Write down your answer on paper or type it
     into a comment, and then compare it with what Coq prints. *)
 
+(* forall P  : rgb -> Prop, P red -> P green -> P blue -> forall r: rgb, P r *)
+
 Inductive rgb : Type :=
   | red : rgb
   | green : rgb
   | blue : rgb.
 Check rgb_ind.
+
 (** [] *)
 
 (** Here's another example, this time with one of the constructors
@@ -128,12 +133,11 @@ Inductive natlist : Type :=
   | ncons : nat -> natlist -> natlist.
 
 Check natlist_ind.
-(* ===> (modulo a little variable renaming for clarity)
-   natlist_ind :
-      forall P : natlist -> Prop,
-         P nnil  ->
-         (forall (n : nat) (l : natlist), P l -> P (ncons n l)) ->
-         forall n : natlist, P n *)
+(* forall P: natlist -> Prop,
+    P nnil ->
+    (forall (n:nat) (nl:natlist), P nl -> P (ncons n nl)) ->
+    forall n: natlist, P n.
+ *)
 
 (** **** Exercise: 1 star, optional (natlist1)  *)
 (** Suppose we had written the above definition a little
@@ -144,6 +148,12 @@ Inductive natlist1 : Type :=
   | nsnoc1 : natlist1 -> nat -> natlist1.
 
 (** Now what will the induction principle look like? *)
+(* forall P: natlist -> Prop,
+    P nnil1 ->
+    (forall (nl:natlist) (n:nat) ), P nl -> P (nsnoc1 nl n)) ->
+    forall n:natlist P n.
+ *)
+Check natlist1_ind.
 (** [] *)
 
 (** From these examples, we can extract this general rule:
@@ -157,11 +167,10 @@ Inductive natlist1 : Type :=
       says (in English):
         - "for all values [x1]...[xn] of types [a1]...[an], if [P]
            holds for each of the inductive arguments (each [xi] of
-           type [t]), then [P] holds for [c x1 ... xn]". 
+           type [t]), then [P] holds for [c x1 ... xn]".
+ (* NOTE: type [t]; recursively!! *)
 
 *)
-
-
 
 (** **** Exercise: 1 star, optional (byntree_ind)  *)
 (** Write out the induction principle that Coq will generate for the
@@ -172,8 +181,14 @@ Inductive byntree : Type :=
  | bempty : byntree  
  | bleaf  : yesno -> byntree
  | nbranch : yesno -> byntree -> byntree -> byntree.
-(** [] *)
 
+(* byntree_ind:
+    forall P: byntree -> Prop:
+    P bempty ->
+    forall (yn:yesno) (t:byntree), P t -> P (bleaf yn) ->
+    (forall (yn:yesno) (t1:byntree), (P t1) -> forall t2:byntree, P t2 -> P (nbranch yn t1 t2)) ->
+    forall t:byntree, P t.
+ *)
 
 (** **** Exercise: 1 star, optional (ex_set)  *)
 (** Here is an induction principle for an inductively defined
@@ -186,9 +201,10 @@ Inductive byntree : Type :=
     Give an [Inductive] definition of [ExSet]: *)
 
 Inductive ExSet : Type :=
-  (* FILL IN HERE *)
+| con1: bool -> ExSet
+| con2: nat -> ExSet -> ExSet
 .
-(** [] *)
+Check ExSet_ind.
 
 (** What about polymorphic datatypes?
 
@@ -218,6 +234,8 @@ Inductive ExSet : Type :=
    the following datatype.  Compare your answer with what Coq
    prints. *)
 
+Check list_ind.
+
 Inductive tree (X:Type) : Type :=
   | leaf : X -> tree X
   | node : tree X -> tree X -> tree X.
@@ -234,8 +252,13 @@ Check tree_ind.
             (forall m : mytype X, P m -> 
                forall n : nat, P (constr3 X m n)) ->
             forall m : mytype X, P m                   
-*) 
-(** [] *)
+ *)
+Inductive mytype (X:Type) :=
+| constr1 : X -> mytype X
+| constr2 : nat -> mytype X
+| constr3 : mytype X -> nat -> mytype X
+.
+Check mytype_ind.
 
 (** **** Exercise: 1 star, optional (foo)  *)
 (** Find an inductive definition that gives rise to the
