@@ -638,7 +638,11 @@ Abort.
     propositions are equivalent. *)
 
 Definition peirce := forall P Q: Prop, 
-  ((P->Q)->P)->P.
+                       ((P->Q)->P)->P.
+
+Theorem peirce_true : peirce.
+Proof. unfold peirce. intros. Abort.
+
 Definition classic := forall P:Prop, 
   ~~P -> P.
 Definition excluded_middle := forall P:Prop, 
