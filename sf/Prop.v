@@ -330,9 +330,7 @@ Proof.
   apply g_0.
   apply g_plus3. apply g_0.
   apply g_plus5. apply g_0.
-  generalize dependent IHbeautiful2.
-  generalize dependent IHbeautiful1.
-  apply gorgeous_sum.
+  apply (gorgeous_sum n m IHbeautiful1 IHbeautiful2).
   Qed.
 
 (** **** Exercise: 3 stars, optional (g_times2)  *)
@@ -370,39 +368,43 @@ Qed.
 (** Could this proof also be carried out by induction on [n] instead
     of [E]?  If not, why not? *)
 
-(* FILL IN HERE *)
-(** [] *)
+Theorem ev__even' : forall n,
+  ev n -> even n.
+Proof.
+  intros n.  induction n as [|n'].
+  intros. unfold even. reflexivity.
+  unfold even. intros.
+Abort.
+(* NO! *)
 
 (** Intuitively, the induction principle [ev n] evidence [ev n] is
     similar to induction on [n], but restricts our attention to only
     those numbers for which evidence [ev n] could be generated. *)
 
 (** **** Exercise: 1 star (l_fails)  *)
-(** The following proof attempt will not succeed.
-     Theorem l : forall n,
-       ev n.
+(** The following proof attempt will not succeed.*)
+     Theorem llllll : forall n,  ev n.
      Proof.
        intros n. induction n.
          Case "O". simpl. apply ev_0.
-         Case "S".
-           ...
-   Intuitively, we expect the proof to fail because not every
-   number is even. However, what exactly causes the proof to fail?
+         Case "S". Abort.
+   (** Intuitively, we expect the proof to fail because not every
+   number is even. However, what exactly causes the proof to fail? *)
 
-(* FILL IN HERE *)
-*)
-(** [] *)
+     (* no extra rules to apply for (S n) *)
+                                 
 
 (** Here's another exercise requiring induction on evidence. *)
 (** **** Exercise: 2 stars (ev_sum)  *)
 
 Theorem ev_sum : forall n m,
    ev n -> ev m -> ev (n+m).
-Proof. 
-  (* FILL IN HERE *) Admitted.
-(** [] *)
-
-
+Proof.
+  intros n m evn. generalize dependent m.
+  induction evn.
+  simpl. intros. assumption.
+  intros m evm.  rewrite -> plus_comm. rewrite <- plus_n_Sm. rewrite <- plus_n_Sm. rewrite -> plus_comm. apply ev_SS. apply IHevn in evm. assumption.
+Qed.
 
 (* ####################################################### *)
 (** ** Inversion on Evidence *)
@@ -423,11 +425,18 @@ Proof.
   Case "E = ev_0". simpl. apply ev_0. 
   Case "E = ev_SS n' E'". simpl. apply E'.  Qed.
 
+(* reversed order(backward); unlike ev_sum. *)
+
 (** **** Exercise: 1 star, optional (ev_minus2_n)  *)
 (** What happens if we try to use [destruct] on [n] instead of [inversion] on [E]? *)
-
-(* FILL IN HERE *)
-(** [] *)
+Theorem ev_minus2_n: forall n,  ev n -> ev (pred (pred n)). 
+Proof.
+  intros n E.
+  destruct n.
+  simpl. assumption.
+  simpl.
+Abort.
+(* stuck. *)
 
 (** *** *)
 (** Here is another example, in which [inversion] helps narrow down to
@@ -439,6 +448,8 @@ Proof.
   intros n E. 
   inversion E as [| n' E']. 
   apply E'. Qed.
+
+(* still backward; w/o ev_0 *)
 
 (** ** The Inversion Tactic Revisited *)
 
@@ -478,16 +489,16 @@ Proof.
 Theorem SSSSev__even : forall n,
   ev (S (S (S (S n)))) -> ev n.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros.
+  inversion H. inversion H1. assumption.
+Qed.
 
 (** The [inversion] tactic can also be used to derive goals by showing
     the absurdity of a hypothesis. *)
 
 Theorem even5_nonsense : 
   ev 5 -> 2 + 2 = 9.
-Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+Proof. intros. inversion H. inversion H1. inversion H3. Qed.
 
 (** **** Exercise: 3 stars, advanced (ev_ev__ev)  *)
 (** Finding the appropriate thing to do induction on is a
@@ -496,8 +507,13 @@ Proof.
 Theorem ev_ev__ev : forall n m,
   ev (n+m) -> ev n -> ev m.
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+  intros n m evnm evn.
+  induction evn.
+  simpl in evnm. assumption.
+  assert (tmp_S_S_n_m : S (S n) + m = S (S (n + m))).
+  simpl. reflexivity.
+  rewrite -> tmp_S_S_n_m in evnm. inversion evnm. apply IHevn. assumption.
+  Qed.
 
 (** **** Exercise: 3 stars, optional (ev_plus_plus)  *)
 (** Here's an exercise that just requires applying existing lemmas.  No
@@ -507,9 +523,13 @@ Proof.
 Theorem ev_plus_plus : forall n m p,
   ev (n+m) -> ev (n+p) -> ev (m+p).
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
-
+  intros n m p H0.
+  apply ev_ev__ev.                (* Important! *)
+  rewrite <- plus_assoc. rewrite -> (plus_comm m p). rewrite -> (plus_assoc p p m). rewrite <- double_plus. rewrite -> plus_assoc. rewrite -> plus_comm. rewrite -> plus_assoc. apply ev_sum.
+  rewrite -> plus_comm. assumption.
+  apply double_even.
+Qed.
+  
 
 (* ####################################################### *)
 (** * Discussion and Variations *)
@@ -602,8 +622,11 @@ Qed.
        forall l, pal l -> l = rev l.
 *)
 
-(* FILL IN HERE *)
-(** [] *)
+Inductive palindromes {X} : list X -> Prop :=
+| pal_nil : palindromes []
+| pal_one x : palindromes [x]
+| pal_xs x xs : palindromes (x::(snoc xs x)).
+(* TODO *)
 
 (* Again, the converse direction is much more difficult, due to the
 lack of evidence. *)
@@ -614,9 +637,7 @@ lack of evidence. *)
      forall l, l = rev l -> pal l.
 *)
 
-(* FILL IN HERE *)
-(** [] *)
-
+(* TODO TODO *)
 
 
 (* ####################################################### *)
@@ -688,6 +709,7 @@ Proof.
 End LeModule.
 
 Definition lt (n m:nat) := le (S n) m.
+(* for nat !!! *)
 
 Notation "m < n" := (lt m n).
 
@@ -707,15 +729,16 @@ Inductive next_even : nat -> nat -> Prop :=
 (** Define an inductive binary relation [total_relation] that holds
     between every pair of natural numbers. *)
 
-(* FILL IN HERE *)
-(** [] *)
+Inductive total_relation: nat->nat->Prop :=
+| tr_le: forall m n, m <= n -> total_relation m n
+| tr_ge: forall m n, n <= m -> total_relation n m.
 
 (** **** Exercise: 2 stars (empty_relation)  *)
 (** Define an inductive binary relation [empty_relation] (on numbers)
     that never holds. *)
 
-(* FILL IN HERE *)
-(** [] *)
+Inductive empty_relation: nat->nat->Prop :=
+  | te_le: forall m n, m<n -> n<m -> empty_relation m n.
 
 (** **** Exercise: 2 stars, optional (le_exercises)  *)
 (** Here are a number of facts about the [<=] and [<] relations that
@@ -724,69 +747,90 @@ Inductive next_even : nat -> nat -> Prop :=
 
 Lemma le_trans : forall m n o, m <= n -> n <= o -> m <= o.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. rewrite -> H.  induction n.
+  intros. assumption.
+  intros. assumption.
+Qed.
 
 Theorem O_le_n : forall n,
   0 <= n.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. induction n as [|n'].
+  apply le_n. apply le_S. assumption.
+Qed.
 
 Theorem n_le_m__Sn_le_Sm : forall n m,
   n <= m -> S n <= S m.
-Proof. 
-  (* FILL IN HERE *) Admitted.
-
+Proof.
+  intros. generalize dependent n.
+  induction m as [|m'].
+  intros. inversion H. apply le_n.
+  intros. inversion H. apply le_n. apply le_S. apply IHm'. assumption.
+Qed.
 
 Theorem Sn_le_Sm__n_le_m : forall n m,
   S n <= S m -> n <= m.
-Proof. 
-  (* FILL IN HERE *) Admitted.
-
+Proof.
+  intros. inversion H. apply le_n. assert (tmp : n<=S n).
+  apply le_S. apply le_n. apply (le_trans n (S n) m tmp H1).
+Qed.
 
 Theorem le_plus_l : forall a b,
   a <= a + b.
-Proof. 
-  (* FILL IN HERE *) Admitted.
+Proof.
+  intros. induction a as [|a'].
+  simpl.  apply O_le_n.
+  simpl. apply n_le_m__Sn_le_Sm. apply IHa'.
+Qed.
 
 Theorem plus_lt : forall n1 n2 m,
   n1 + n2 < m ->
   n1 < m /\ n2 < m.
 Proof. 
- unfold lt. 
- (* FILL IN HERE *) Admitted.
+  unfold lt.
+  intros. induction m as [|m'].
+  inversion H. apply Sn_le_Sm__n_le_m in H. split.
+  apply n_le_m__Sn_le_Sm. assert (tmp : n1<=n1+n2). apply le_plus_l. apply (le_trans n1 (n1+n2) m' tmp H).
+  apply n_le_m__Sn_le_Sm. assert (tmp : n2<=n1+n2). rewrite -> plus_comm. apply le_plus_l. apply (le_trans n2 (n1+n2) m' tmp H).
+Qed.
 
 Theorem lt_S : forall n m,
   n < m ->
   n < S m.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. intros n m. unfold lt. intros. apply le_S in H. assumption. Qed.
 
 Theorem ble_nat_true : forall n m,
   ble_nat n m = true -> n <= m.
-Proof. 
-  (* FILL IN HERE *) Admitted.
+Proof.
+  intros n m H. generalize dependent m. induction n as [|n'].
+  intros. apply O_le_n.
+  destruct m as [|m'].
+  simpl. intros. inversion H.
+  simpl. intros. apply n_le_m__Sn_le_Sm. apply IHn'. assumption.
+Qed.
 
 Theorem le_ble_nat : forall n m,
   n <= m ->
   ble_nat n m = true.
 Proof.
-  (* Hint: This may be easiest to prove by induction on [m]. *)
-  (* FILL IN HERE *) Admitted.
+  intros. generalize dependent n.  induction m as [|m'].
+  intros. inversion H. reflexivity.
+  intros.  inversion H. symmetry. apply ble_nat_refl. apply IHm' in H1.
+  induction n as [|n']. reflexivity. simpl. apply Sn_le_Sm__n_le_m in H. apply IHm'. assumption.
+Qed.
 
 Theorem ble_nat_true_trans : forall n m o,
   ble_nat n m = true -> ble_nat m o = true -> ble_nat n o = true.                               
 Proof.
-  (* Hint: This theorem can be easily proved without using [induction]. *)
-  (* FILL IN HERE *) Admitted.
+  intros. apply ble_nat_true in H. apply ble_nat_true in H0. apply le_ble_nat. apply (le_trans n m o H H0).
+Qed.
 
 (** **** Exercise: 2 stars, optional (ble_nat_false)  *)
 Theorem ble_nat_false : forall n m,
   ble_nat n m = false -> ~(n <= m).
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
-
-
+  unfold not. intros. apply le_ble_nat in H0. rewrite -> H in H0. inversion H0. Qed.
+  
 (** **** Exercise: 3 stars (R_provability2)  *)
 Module R.
 (** We can define three-place relations, four-place relations,
@@ -804,17 +848,26 @@ Inductive R : nat -> nat -> nat -> Prop :=
       - [R 1 1 2]
       - [R 2 2 6]
 
+(* see below *)
+
     - If we dropped constructor [c5] from the definition of [R],
       would the set of provable propositions change?  Briefly (1
       sentence) explain your answer.
+
+(* ??? Yes *)
   
     - If we dropped constructor [c4] from the definition of [R],
       would the set of provable propositions change?  Briefly (1
       sentence) explain your answer.
 
-(* FILL IN HERE *)
-[]
-*)
+ (* ??? No *)
+
+ *)
+Example R_e1 : R 1 1 2.
+Proof. apply c3. apply c2. apply c1. Qed.
+
+Example R_e2 : R 2 2 6.
+Proof. Abort.
 
 (** **** Exercise: 3 stars, optional (R_fact)  *)  
 (** Relation [R] actually encodes a familiar function.  State and prove two
@@ -823,8 +876,7 @@ Inductive R : nat -> nat -> nat -> Prop :=
     [n], and [o], and vice versa?
 *)
 
-(* FILL IN HERE *)
-(** [] *)
+(* TODO xxx *)
 
 End R.
 
@@ -858,10 +910,9 @@ End R.
       transitive -- that is, if [l1] is a subsequence of [l2] and [l2] 
       is a subsequence of [l3], then [l1] is a subsequence of [l3].  
       Hint: choose your induction carefully!
-*)
+ *)
 
-(* FILL IN HERE *)
-(** [] *)
+(* TODO xxx *)
 
 (** **** Exercise: 2 stars, optional (R_provability)  *)
 (** Suppose we give Coq the following definition:
@@ -871,13 +922,29 @@ End R.
       | c3 : forall n l, R (S n) l -> R n l.
     Which of the following propositions are provable?
 
-    - [R 2 [1,0]]
-    - [R 1 [1,2,1,0]]
-    - [R 6 [3,2,1,0]]
-*)
+    - [R 2 [1;0]]
+    - [R 1 [1;2;1;0]]
+    - [R 6 [3;2;1;0]]
+ *)
 
-(** [] *)
+Module RR.
+  
+Inductive R : nat -> list nat -> Prop :=
+ | c1 : R 0 []
+ | c2 : forall n l, R n l -> R (S n) (n :: l)
+ | c3 : forall n l, R (S n) l -> R n l.
 
+Example R_l1 : R 2 [1;0].
+Proof. apply (c2 1 [0]). apply (c2 0 []). apply c1.
+Qed.
+
+Example R_l2 : R 1 [1;2;1;0].
+Proof. apply c3. apply c2. apply c3. apply c3. apply c2. apply c2. apply c2. apply c1. Qed.
+
+Example R_l3 : R 6 [3;2;1;0].
+Proof. Abort.
+
+End RR.
 
 (* ##################################################### *)
 (** * Programming with Propositions *)
@@ -1007,9 +1074,6 @@ Definition natural_number_induction_valid : Prop :=
     true_for_all_numbers P. 
 
 
-
-
-
 (** **** Exercise: 3 stars (combine_odd_even)  *)
 (** Complete the definition of the [combine_odd_even] function
     below. It takes as arguments two properties of numbers [Podd] and
@@ -1018,7 +1082,7 @@ Definition natural_number_induction_valid : Prop :=
     equivalent to [Peven n] otherwise. *)
 
 Definition combine_odd_even (Podd Peven : nat -> Prop) : nat -> Prop :=
-  (* FILL IN HERE *) admit.
+  fun x => if (oddb x) then (Podd x) else (Peven x).
 
 (** To test your definition, see whether you can prove the following
     facts: *)
@@ -1029,7 +1093,9 @@ Theorem combine_odd_even_intro :
     (oddb n = false -> Peven n) ->
     combine_odd_even Podd Peven n.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. unfold combine_odd_even.
+  induction oddb. apply H. reflexivity. apply H0. reflexivity.
+Qed.
 
 Theorem combine_odd_even_elim_odd :
   forall (Podd Peven : nat -> Prop) (n : nat),
@@ -1037,7 +1103,7 @@ Theorem combine_odd_even_elim_odd :
     oddb n = true ->
     Podd n.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. unfold combine_odd_even in H. rewrite -> H0 in H. assumption. Qed.
 
 Theorem combine_odd_even_elim_even :
   forall (Podd Peven : nat -> Prop) (n : nat),
@@ -1045,9 +1111,7 @@ Theorem combine_odd_even_elim_even :
     oddb n = false ->
     Peven n.
 Proof.
-  (* FILL IN HERE *) Admitted.
-
-(** [] *)
+  intros. unfold combine_odd_even in H. rewrite -> H0 in H. assumption. Qed.
 
 (* ##################################################### *)
 (** One more quick digression, for adventurous souls: if we can define
@@ -1070,7 +1134,10 @@ Example true_upto_n_example :
     (true_upto_n__true_everywhere 3 (fun n => even n))
   = (even 3 -> even 2 -> even 1 -> forall m : nat, even m).
 Proof. reflexivity.  Qed.
-*)
+ *)
+
+(* TODO xxx *)
+
 (** [] *)
 
 (** $Date: 2014-12-31 11:17:56 -0500 (Wed, 31 Dec 2014) $ *)
