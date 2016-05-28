@@ -351,6 +351,7 @@ Admitted.
     that [test] evaluates to [true] on all their members, [filter test
     l] is the longest.  Express this claim formally and prove it. *)
 
+(* TODO already defined in Prop.v exercises *)
 Inductive subseq {X:Type} : list X -> list X -> Prop :=
 |subseq_nil : forall l, subseq nil l
 | subseq_cons : forall x l1 l2, subseq (x::l1) (x::l2)
@@ -377,12 +378,25 @@ Inductive appears_in {X:Type} (a:X) : list X -> Prop :=
 Lemma appears_in_app : forall (X:Type) (xs ys : list X) (x:X), 
      appears_in x (xs ++ ys) -> appears_in x xs \/ appears_in x ys.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. generalize dependent ys.  induction xs as [|h xs'].
+  right.
+  inversion H. simpl in H0. rewrite <- H0. apply ai_here.
+  simpl in H1. rewrite <- H1. apply ai_later. assumption.
+  intros. inversion H. left. apply ai_here. simpl in H. apply IHxs' in H1.
+  destruct H1. left. apply ai_later. assumption. right. assumption.
+Qed.
+
+
 
 Lemma app_appears_in : forall (X:Type) (xs ys : list X) (x:X), 
      appears_in x xs \/ appears_in x ys -> appears_in x (xs ++ ys).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. generalize dependent ys.  induction xs as [|h xs'].
+  intros. destruct H. inversion H. simpl. assumption.
+  intros. induction ys as [|hy ys'].
+  simpl. inversion H.
+(* FILL IN HERE *) Admitted.
+(* TODO proof *)
 
 
 (** Now use [appears_in] to define a proposition [disjoint X l1 l2],
@@ -475,14 +489,22 @@ Example test_nostutter_4:      not (nostutter [3;1;1;4]).
 
 Lemma app_length : forall (X:Type) (l1 l2 : list X),
   length (l1 ++ l2) = length l1 + length l2. 
-Proof. 
-  (* FILL IN HERE *) Admitted.
+Proof.
+  induction l1 as [|h l1'].
+  simpl. intros. reflexivity.
+  simpl. intros. apply f_equal. apply IHl1'.
+Qed.
 
 Lemma appears_in_app_split : forall (X:Type) (x:X) (l:list X),
   appears_in x l -> 
   exists l1, exists l2, l = l1 ++ (x::l2).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros.
+  induction H.
+  exists [], l. reflexivity.
+  destruct IHappears_in. destruct H0.
+  exists (b::witness), witness0. simpl. rewrite <- H0. reflexivity.
+Qed.
 
 (** Now define a predicate [repeats] (analogous to [no_repeats] in the
    exercise above), such that [repeats X l] asserts that [l] contains
@@ -514,6 +536,8 @@ Proof.
 (** [] *)
 
 (* FILL IN HERE *)
+
+(* TODO xxx *)
 
 
 (** $Date: 2014-12-31 16:01:37 -0500 (Wed, 31 Dec 2014) $ *)
