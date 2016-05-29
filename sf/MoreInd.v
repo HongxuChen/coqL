@@ -270,8 +270,14 @@ Check mytype_ind.
              (forall f1 : nat -> foo X Y,
                (forall n : nat, P (f1 n)) -> P (quux X Y f1)) ->
              forall f2 : foo X Y, P f2       
-*) 
-(** [] *)
+ *)
+Inductive foo (X Y : Type) :=
+| bar  : X -> foo X Y
+| baz  : Y -> foo X Y
+| quux : nat -> foo X Y -> nat -> foo X Y                
+.
+
+Check foo_ind.
 
 (** **** Exercise: 1 star, optional (foo')  *)
 (** Consider the following inductive definition: *)
@@ -280,18 +286,15 @@ Inductive foo' (X:Type) : Type :=
   | C1 : list X -> foo' X -> foo' X
   | C2 : foo' X.
 
+Check foo'_ind.
+
 (** What induction principle will Coq generate for [foo']?  Fill
    in the blanks, then check your answer with Coq.)
      foo'_ind :
         forall (X : Type) (P : foo' X -> Prop),
-              (forall (l : list X) (f : foo' X),
-                    _______________________ -> 
-                    _______________________   ) ->
-             ___________________________________________ ->
-             forall f : foo' X, ________________________
+              forall (l : list X) (f : foo' X), P f -> P (C1 X l f) -> 
+             forall f : foo' X, P f
 *)
-
-(** [] *)
 
 (* ##################################################### *)
 (** ** Induction Hypotheses *)
@@ -325,8 +328,7 @@ Definition P_m0r' : nat->Prop :=
 (** Now when we do the proof it is easier to see where [P_m0r]
     appears. *)
 
-Theorem mult_0_r'' : forall n:nat, 
-  P_m0r n.
+Theorem mult_0_r'' : forall n:nat,  P_m0r n.
 Proof.
   apply nat_ind.
   Case "n = O". reflexivity.
@@ -430,9 +432,21 @@ Proof.
     induction, and state the theorem and proof in terms of this
     defined proposition.  *)
 
-(* FILL IN HERE *)
-(** [] *)
+Definition P_Pa (n m p:nat) : Prop := n + (m + p) = (n + m) + p.
+Theorem plus_assoc''' : forall n m p,  P_Pa n m p.
+Proof.
+  intros. generalize dependent n. apply nat_ind.
+  unfold P_Pa. simpl. reflexivity.
+  unfold P_Pa. simpl. intros. rewrite -> H. reflexivity.
+Qed.
 
+Definition P_Pc (n m:nat) : Prop :=  n + m = m + n.
+Theorem plus_comm''' : forall n m, P_Pc n m.
+Proof.
+  intros. generalize dependent n. apply nat_ind.
+  unfold P_Pc. simpl. apply (plus_n_O m).
+  unfold P_Pc. intros. simpl. rewrite -> H. rewrite <- plus_n_Sm. reflexivity.
+Qed.
 
 (** ** Generalizing Inductions. *)
 
@@ -475,15 +489,15 @@ Proof.
       inversion E. 
     Case "b_sum". 
       (* the rest is a tedious case analysis *)
-      destruct p as [|p'].
+      destruct p as [|p'].      (* destruct on nat *)
       SCase "p = 0".
-        destruct q as [|q'].
+        destruct q as [|q'].    (* destruct on nat *)
         SSCase "q = 0". 
           inversion E.
         SSCase "q = S q'".
           apply IHq. apply E. 
       SCase "p = S p'". 
-        destruct q as [|q'].
+        destruct q as [|q'].    (* destruct on nat *)
         SSCase "q = 0". 
           apply IHp.  rewrite plus_0_r in E. apply E. 
         SSCase "q = S q'".
@@ -496,11 +510,20 @@ proof state out of the original one. *)
 Lemma one_not_beautiful': ~ beautiful 1. 
 Proof.
   intros H.  
-  remember 1 as n eqn:E. 
+  remember 1 as n eqn:E.
   (* now carry on as above *)
-  induction H.   
-Admitted.
+  induction H.
+  inversion E. inversion E. inversion E.
+  destruct  n as [|n'].
+  Case "n=0".
+  simpl in E. apply IHbeautiful2 in E. inversion E.
+  Case "n=S n'".
+  destruct m as [|m'].
+  simpl in E. rewrite <- plus_n_O in E. apply IHbeautiful1 in E. inversion E.
+  simpl in E. inversion E. destruct n' as [|n'']. inversion H2. inversion H2.
+Qed.  
 
+(* NOTE: use [remember] to keep hypothesis; use [destruct] (may be multiple times) rather than [induction]; *)
 
 (* ####################################################### *)
 (** * Informal Proofs (Advanced) *)
@@ -657,6 +680,16 @@ Admitted.
 
              But then, by [le_S], [n <= S o'].  [] *)
 
+Theorem le_trans_Test : forall n m o, n<=m->m<=o->n<=o.
+Proof.
+  intros.
+  induction H.
+  assumption.
+Abort.
+
+(* TODO ??? *)
+  
+  
 
 
 (* ##################################################### *)
@@ -746,8 +779,6 @@ Admitted.
              forall n : nat, gorgeous n -> P n
     For this reason, Coq actually generates the following simplified
     induction principle for [gorgeous]: *)
-
-
 
 Check gorgeous_ind.
 (* ===>  gorgeous_ind
@@ -901,6 +932,8 @@ Check le_ind.
 *)
 (** [] *)
 
+(* TODO xxx *)
+
 
 (* ##################################################### *)
 (** ** Induction Principles for other Logical Propositions *)
@@ -945,6 +978,8 @@ Check eq'_ind.
 
 (** **** Exercise: 1 star, optional (and_ind_principle)  *)
 (** See if you can predict the induction principle for conjunction. *)
+
+(* TODO xxx *)
 
 (* Check and_ind. *)
 (** [] *)
@@ -1108,7 +1143,8 @@ Print nat_rect.
  
 Lemma even__ev' : forall n, even n -> ev n.
 Proof. 
- intros.  
+  intros.
+  (* IMPORTANT!!! *)
  induction n as [ | |n'] using nat_ind2. 
   Case "even 0". 
     apply ev_0.  
@@ -1159,6 +1195,7 @@ Qed.
       All the types here match correctly, but the [match] only
       considers one of the possible constructors for [or].  Coq's
       exhaustiveness check will reject this definition.
+(* SO the Proof object cannot be instantiated; therefore the proposition cannot be proven with this proof. *)
 
     - The checker must make sure that each [fix] expression
       terminates.  It does this using a syntactic check to make sure
@@ -1169,6 +1206,7 @@ Qed.
              fix f (n:nat) : False := f n. 
       Again, this is perfectly well-typed, but (fortunately) Coq will
       reject it. *)
+(* each should be "smaller" than before. *)
 
 (** Note that the soundness of Coq depends only on the correctness of
     this typechecking engine, not on the tactic machinery.  If there
