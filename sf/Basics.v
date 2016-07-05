@@ -850,7 +850,7 @@ Proof.
   - reflexivity.   Qed.
 
 Theorem  plus_1_neq_0'' : forall n, beq_nat (n+1) 0 = false.
-Proof. intros. induction n as [|n'].
+Proof. intros. induction n as [|n' IHn'].
        - reflexivity.
        - reflexivity. Qed.
 
