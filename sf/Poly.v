@@ -123,19 +123,27 @@ Inductive mumble : Type :=
   | c : mumble.
 
 Inductive grumble (X:Type) : Type :=
-  | d : mumble -> grumble X
+  | d : mumble -> grumble X 
   | e : X -> grumble X.
+(* d  : forall X : Type, mumble -> grumble X *)
+(* e  : forall X : Type, X -> grumble X *)
+
+Check (d mumble).
+Check (d mumble (b a 5)).
+Check (e bool true).
+Check (e mumble (b c 0)).
+Check (e bool) .
+Check c.
 
 (** Which of the following are well-typed elements of [grumble X] for
     some type [X]?
       - [d (b a 5)]
-      - [d mumble (b a 5)]
-      - [d bool (b a 5)]
-      - [e bool true]
-      - [e mumble (b c 0)]
+      + [d mumble (b a 5)]
+      + [d bool (b a 5)]
+      + [e bool true]
+      + [e mumble (b c 0)]
       - [e bool (b c 0)]
       - [c]
-(* FILL IN HERE *)
 *)
 (** [] *)
 
@@ -275,6 +283,8 @@ Fixpoint repeat''' {X : Type} (x : X) (count : nat) : list X :=
     instance, consider the following alternative definition of the
     [list] type: *)
 
+(* CHX: Inductive constructors *)
+
 Inductive list' {X:Type} : Type :=
   | nil' : list'
   | cons' : X -> list' -> list'.
@@ -371,18 +381,21 @@ Definition list123''' := [1; 2; 3].
 
 Theorem app_nil_r : forall (X:Type), forall l:list X,
   l ++ [] = l.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. intros X. induction l as [|h t].
+       - reflexivity.
+       - simpl. rewrite -> IHt. reflexivity. Qed.
 
 Theorem app_assoc : forall A (l m n:list A),
   l ++ m ++ n = (l ++ m) ++ n.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. intros A. induction l as [|h t]; simpl; intros.
+       - reflexivity.
+       - rewrite -> IHt. reflexivity. Qed.
 
 Lemma app_length : forall (X:Type) (l1 l2 : list X),
   length (l1 ++ l2) = length l1 + length l2.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. intros X. induction l1 as [|h1 t1 IHt1]; simpl.
+       - reflexivity.
+       - intros. rewrite -> IHt1. reflexivity. Qed.
 (** [] *)
 
 (** **** Exercise: 2 stars, optional (more_poly_exercises)  *)
@@ -390,13 +403,17 @@ Proof.
 
 Theorem rev_app_distr: forall X (l1 l2 : list X),
   rev (l1 ++ l2) = rev l2 ++ rev l1.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. intros X. induction l1 as [|h1 t1 IHt1]; simpl.
+       - intros. rewrite -> app_nil_r. reflexivity.
+       - intros. rewrite -> IHt1. rewrite -> app_assoc. reflexivity.
+Qed.
 
 Theorem rev_involutive : forall X : Type, forall l : list X,
   rev (rev l) = l.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. intros X. induction l as [|h t IHt].
+       -
+         (* TODO *)
+Admitted.
 (** [] *)
 
 (* ###################################################### *)
@@ -456,16 +473,22 @@ Fixpoint combine {X Y : Type} (lx : list X) (ly : list Y)
   | x :: tx, y :: ty => (x, y) :: (combine tx ty)
   end.
 
+
 (** **** Exercise: 1 star, optional (combine_checks)  *)
 (** Try answering the following questions on paper and
     checking your answers in coq:
     - What is the type of [combine] (i.e., what does [Check
       @combine] print?)
+
+(* @combine *)
+(*      : forall X Y : Type, list X -> list Y -> list (X * Y) *)
+
     - What does
-
         Compute (combine [1;2] [false;false;true;true]).
+      print?
+     (* [(1, false); (2, false)] : list (nat * bool) *)
 
-      print?   [] *)
+ [] *)
 
 (** **** Exercise: 2 stars, recommended (split)  *)
 (** The function [split] is the right inverse of [combine]: it takes a
@@ -476,13 +499,15 @@ Fixpoint combine {X Y : Type} (lx : list X) (ly : list Y)
     [split].  Make sure it passes the given unit test. *)
 
 Fixpoint split {X Y : Type} (l : list (X*Y))
-               : (list X) * (list Y) :=
-(* FILL IN HERE *) admit.
+: (list X) * (list Y) :=
+  match l with
+    | [] => ([], [])
+    | (h1, h2)::t => (h1::(fst (split t)), h2::(snd (split t)))
+  end.
 
 Example test_split:
   split [(1,false);(2,false)] = ([1;2],[false;false]).
-Proof.
-(* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 (** [] *)
 
 (* ###################################################### *)
@@ -521,7 +546,10 @@ Proof. reflexivity. Qed.
     passes the unit tests below. *)
 
 Definition hd_error {X : Type} (l : list X) : option X :=
-  (* FILL IN HERE *) admit.
+  match l with
+    | nil => None
+    | h::t => Some h
+  end.
 
 (** Once again, to force the implicit arguments to be explicit,
     we can use [@] before the name of the function. *)
@@ -529,9 +557,11 @@ Definition hd_error {X : Type} (l : list X) : option X :=
 Check @hd_error.
 
 Example test_hd_error1 : hd_error [1;2] = Some 1.
- (* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
+
 Example test_hd_error2 : hd_error  [[1];[2]]  = Some [1].
- (* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
+
 (** [] *)
 
 (* ###################################################### *)
@@ -649,15 +679,15 @@ Proof. reflexivity.  Qed.
     7. *)
 
 Definition filter_even_gt7 (l : list nat) : list nat :=
-  (* FILL IN HERE *) admit.
+  filter (fun e => blt_nat 7 e && evenb e) l.
 
 Example test_filter_even_gt7_1 :
   filter_even_gt7 [1;2;6;9;10;3;12;8] = [10;12;8].
- (* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 
 Example test_filter_even_gt7_2 :
   filter_even_gt7 [5;2;6;19;129] = [].
- (* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars (partition)  *)
@@ -677,13 +707,14 @@ Example test_filter_even_gt7_2 :
 Definition partition {X : Type}
                      (test : X -> bool)
                      (l : list X)
-                   : list X * list X :=
-(* FILL IN HERE *) admit.
+: list X * list X :=
+  (filter test l, filter (fun x => negb (test x)) l).
 
 Example test_partition1: partition oddb [1;2;3;4;5] = ([1;3;5], [2;4]).
-(* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
+
 Example test_partition2: partition (fun x => false) [5;9;0] = ([], [5;9;0]).
-(* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 (** [] *)
 
 (* ###################################################### *)
@@ -731,8 +762,11 @@ Proof. reflexivity.  Qed.
 
 Theorem map_rev : forall (X Y : Type) (f : X -> Y) (l : list X),
   map f (rev l) = rev (map f l).
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. intros X Y f. induction l as [|h t IHt].
+       - reflexivity.
+       - simpl.
+         (* TODO *)
+Admitted.
 (** [] *)
 
 (** **** Exercise: 2 stars, recommended (flat_map)  *)
@@ -748,13 +782,16 @@ Proof.
 *)
 
 Fixpoint flat_map {X Y:Type} (f:X -> list Y) (l:list X)
-                   : (list Y) :=
-  (* FILL IN HERE *) admit.
+: (list Y) :=
+  match l with
+    | [] => []
+    | h::t => f h ++ (flat_map f t)
+  end.
 
 Example test_flat_map1:
   flat_map (fun n => [n;n;n]) [1;5;4]
   = [1; 1; 1; 5; 5; 5; 4; 4; 4].
- (* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 (** [] *)
 
 (** Lists are not the only inductive type that we can write a
@@ -776,6 +813,20 @@ Definition option_map {X Y : Type} (f : X -> Y) (xo : option X)
     done so correctly.  (This exercise is not to be turned in; it is
     probably easiest to do it on a _copy_ of this file that you can
     throw away afterwards.)  [] *)
+
+Fixpoint filter_explicit (X:Type) (test: X->bool) (l:list X)
+                : (list X) :=
+  match l with
+  | []     => []
+  | h :: t => if test h then h :: (filter_explicit X test t)
+                        else       filter_explicit X test t
+  end.
+
+Fixpoint map_explicit (X Y:Type) (f:X->Y) (l:list X) : (list Y) :=
+  match l with
+  | nil    => nil
+  | h :: t => (f h) :: (map_explicit X Y f t)
+  end.
 
 (* ###################################################### *)
 (** ** Fold *)
@@ -828,6 +879,14 @@ Proof. reflexivity. Qed.
     that takes an [X] and a [Y] and returns a [Y].  Can you think of a
     situation where it would be useful for [X] and [Y] to be
     different? *)
+
+Fixpoint length_implicit {X:Type} (l:list X) :=
+match l with
+  | [] => 0
+  | h::t => 1+(length_implicit t)
+end.
+
+Compute (fold (fun l acc => (length_implicit l) + acc) [[1;2;3];[4;5]] 0).
 
 (* ###################################################### *)
 (** ** Functions That Construct Functions *)
@@ -895,8 +954,12 @@ Proof. reflexivity. Qed.
 (** Prove the correctness of [fold_length]. *)
 
 Theorem fold_length_correct : forall X (l : list X),
-  fold_length l = length l.
-(* FILL IN HERE *) Admitted.
+                                fold_length l = length l.
+Proof. intros X. induction l as [|h t IHt].
+       - reflexivity.
+       - simpl. rewrite <- IHt. reflexivity.
+Qed.
+(* CHX: simpl doesn't help; but reflexivity complete the proof. *)
 (** [] *)
 
 (** **** Exercise: 3 stars (fold_map)  *)
@@ -904,12 +967,17 @@ Theorem fold_length_correct : forall X (l : list X),
     below. *)
 
 Definition fold_map {X Y:Type} (f : X -> Y) (l : list X) : list Y :=
-(* FILL IN HERE *) admit.
+  fold (fun e acc => (f e)::acc) l [].
+
+Theorem fold_map_correct : forall (X Y:Type) (f:X->Y) (l:list X), fold_map f l = map f l.
+Proof. intros X Y f. induction l as [|h t IHt].
+       - reflexivity.
+       - simpl. rewrite <- IHt. reflexivity.
+Qed.
 
 (** Write down a theorem [fold_map_correct] in Coq stating that
    [fold_map] is correct, and prove it. *)
 
-(* FILL IN HERE *)
 (** [] *)
 
 (** **** Exercise: 2 stars, advanced (currying)  *)
@@ -935,8 +1003,7 @@ Definition prod_curry {X Y Z : Type}
     the theorems below to show that the two are inverses. *)
 
 Definition prod_uncurry {X Y Z : Type}
-  (f : X -> Y -> Z) (p : X * Y) : Z :=
-  (* FILL IN HERE *) admit.
+  (f : X -> Y -> Z) (p : X * Y) : Z := f (fst p) (snd p).
 
 (** As a trivial example of the usefulness of currying, we can use it
     to shorten one of the examples that we saw above: *)
@@ -954,14 +1021,12 @@ Theorem uncurry_curry : forall (X Y Z : Type)
                         (f : X -> Y -> Z)
                         x y,
   prod_curry (prod_uncurry f) x y = f x y.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 
 Theorem curry_uncurry : forall (X Y Z : Type)
                         (f : (X * Y) -> Z) (p : X * Y),
   prod_uncurry (prod_curry f) p = f p.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. destruct p as [x y]. reflexivity. Qed.
 (** [] *)
 
 (** **** Exercise: 2 stars, advanced (nth_error_informal)  *)
@@ -1022,46 +1087,48 @@ Definition three : nat := @doit3times.
 
 (** Successor of a natural number: *)
 
+(* succ = lambda n. lambda f. lambda x. f(n f x). *)
+(* rationale: n X f x is the same as x, while surrounding with f application *)
 Definition succ (n : nat) : nat :=
-  (* FILL IN HERE *) admit.
+  fun (X:Type) (f:X->X) (x:X) => f(n X f x).
 
 Example succ_1 : succ zero = one.
-Proof. (* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 
 Example succ_2 : succ one = two.
-Proof. (* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 
 Example succ_3 : succ two = three.
-Proof. (* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 
 (** Addition of two natural numbers: *)
 
 Definition plus (n m : nat) : nat :=
-  (* FILL IN HERE *) admit.
+  fun (X:Type) (f:X->X) (x:X) => (n X f) (m X f x).
 
 Example plus_1 : plus zero one = one.
-Proof. (* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 
 Example plus_2 : plus two three = plus three two.
-Proof. (* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 
 Example plus_3 :
   plus (plus two two) three = plus one (plus three three).
-Proof. (* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 
 (** Multiplication: *)
 
 Definition mult (n m : nat) : nat :=
-  (* FILL IN HERE *) admit.
+  fun (X:Type) (f:X->X) => n X (m X f).
 
 Example mult_1 : mult one one = one.
-Proof. (* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 
 Example mult_2 : mult zero (plus three three) = zero.
-Proof. (* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 
 Example mult_3 : mult two three = plus three three.
-Proof. (* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 
 (** Exponentiation: *)
 
@@ -1070,17 +1137,17 @@ Proof. (* FILL IN HERE *) Admitted.
     a "Universe inconsistency" error, try iterating over a different
     type: [nat] itself is usually problematic.) *)
 
-Definition exp (n m : nat) : nat :=
-  (* FILL IN HERE *) admit.
+(* CHX: TODO *)
+Definition exp (n m : nat) : nat := fun (X:Type) (f:X->X) (x:X) => ( ((m (X->X)) (n X)) f) x.
 
 Example exp_1 : exp two two = plus two two.
-Proof. (* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 
 Example exp_2 : exp three two = plus (mult two (mult two two)) one.
-Proof. (* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 
 Example exp_3 : exp three zero = one.
-Proof. (* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 
 End Church.
 (** [] *)
