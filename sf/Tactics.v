@@ -1166,6 +1166,7 @@ Proof. intros. apply beq_nat_true in H. apply beq_nat_true in H0. rewrite -> H. 
     things than necessary.  Hint: what property do you need of [l1]
     and [l2] for [split] [combine l1 l2 = (l1,l2)] to be true?)  *)
 
+(* CHX: this is a prop; the rhs of a theorem is also a prop. *)
 Definition split_combine_statement : Prop := forall {X Y:Type} (l1:list X) (l2:list Y), (length l1)=(length l2) -> split (combine l1 l2) = (l1, l2).
 
 Lemma length_0_nil : forall (X:Type) (l:list X), 0 = length l -> l=[].

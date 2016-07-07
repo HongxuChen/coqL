@@ -69,6 +69,8 @@ Definition is_three (n : nat) : Prop :=
   n = 3.
 Check is_three.
 (* ===> nat -> Prop *)
+Theorem silly_three : is_three 3.
+Proof. reflexivity. Qed.
 
 (** In Coq, functions that return propositions are said to define
     _properties_ of their arguments.  For instance, here's a
@@ -78,6 +80,7 @@ Check is_three.
 Definition injective {A B} (f : A -> B) :=
   forall x y : A, f x = f y -> x = y.
 
+(* S: nat->nat *)
 Lemma succ_inj : injective S.
 Proof.
   intros n m H. inversion H. reflexivity.
@@ -90,6 +93,7 @@ Qed.
     is also polymorphic: *)
 
 Check @eq.
+(* CHX: important *)
 (* ===> forall A : Type, A -> A -> Prop *)
 
 (** (Notice that we wrote [@eq] instead of [eq]: The type argument [A]
@@ -107,7 +111,7 @@ Check @eq.
 
 Example and_example : 3 + 4 = 7 /\ 2 * 2 = 4.
 
-(** To prove a conjunction, use the [split] tactic.  Its effect is to
+(** To _prove_ a conjunction, use the [split] tactic.  Its effect is to
     generate two subgoals, one for each part of the statement: *)
 
 Proof.
@@ -146,8 +150,10 @@ Qed.
 (** **** Exercise: 2 stars (and_exercise)  *)
 Example and_exercise :
   forall n m : nat, n + m = 0 -> n = 0 /\ m = 0.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. intros. induction n as [|n'].
+       - simpl in H. split; intuition.
+       - inversion H.
+Qed.
 (** [] *)
 
 (** So much for proving conjunctive statements.  To go in the other
@@ -174,7 +180,7 @@ Qed.
 Lemma and_example2' :
   forall n m : nat, n = 0 /\ m = 0 -> n + m = 0.
 Proof.
-  intros n m [Hn Hm].
+  intros n m [Hn Hm].           (* automatically destructed. *)
   rewrite Hn. rewrite Hm.
   reflexivity.
 Qed.
@@ -186,7 +192,7 @@ Qed.
 Lemma and_example2'' :
   forall n m : nat, n = 0 -> m = 0 -> n + m = 0.
 Proof.
-  intros n m Hn Hm.
+  intros n m Hn Hm.             (* destructed as 2 hypotheses (arrow). *)
   rewrite Hn. rewrite Hm.
   reflexivity.
 Qed.
@@ -220,8 +226,7 @@ Proof.
 (** **** Exercise: 1 star, optional (proj2)  *)
 Lemma proj2 : forall P Q : Prop,
   P /\ Q -> Q.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. intros P Q [HP HQ]. apply HQ. Qed.
 (** [] *)
 
 (** Finally, we sometimes need to rearrange the order of conjunctions
@@ -247,8 +252,7 @@ Proof.
 Theorem and_assoc : forall P Q R : Prop,
   P /\ (Q /\ R) -> (P /\ Q) /\ R.
 Proof.
-  intros P Q R [HP [HQ HR]].
-(* FILL IN HERE *) Admitted.
+  intros P Q R [HP [HQ HR]]. repeat split; intuition. Qed.
 (** [] *)
 
 (** By the way, the infix notation [/\] is actually just syntactic
@@ -265,7 +269,7 @@ Check and.
     is.  (Alternatively, we can write [or A B], where [or : Prop ->
     Prop -> Prop].)
 
-    To use a disjunctive hypothesis in a proof, we proceed by case
+    To _use_ a disjunctive hypothesis in a proof, we proceed by case
     analysis, which, as for [nat] or other data types, can be done
     with [destruct] or [intros].  Here is an example: *)
 
@@ -289,7 +293,7 @@ Qed.
     Note that the case analysis pattern ([Hn | Hm]) allows us to name
     the hypothesis that is generated in each subgoal.
 
-    Conversely, to show that a disjunction holds, we need to show that
+    Conversely, to _show_ that a disjunction holds, we need to show that
     one of its sides does. This is done via two tactics, [left] and
     [right].  As their names imply, the first one requires proving the
     left side of the disjunction, while the second requires proving
@@ -316,15 +320,21 @@ Qed.
 (** **** Exercise: 1 star (mult_eq_0)  *)
 Lemma mult_eq_0 :
   forall n m, n * m = 0 -> n = 0 \/ m = 0.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. destruct n as [|n'].
+       - simpl. intros. left. reflexivity.
+       - intros. destruct m as [|m'].
+         + right. reflexivity.
+         + inversion H.
+Qed.
 (** [] *)
 
 (** **** Exercise: 1 star (or_commut)  *)
 Theorem or_commut : forall P Q : Prop,
   P \/ Q  -> Q \/ P.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. intros P Q [HP|HQ].
+       right. intuition.
+       left. intuition.
+       Qed.
 (** [] *)
 
 (** ** Falsehood and Negation *)
@@ -377,8 +387,8 @@ Proof.
 
 Fact not_implies_our_not : forall (P:Prop),
   ~ P -> (forall (Q:Prop), P -> Q).
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. unfold not. intros. apply H in H0. inversion H0. Qed.
+(* inversion/destruct/intuition. *)
 (** [] *)
 
 (** This is how we use [not] to state that [0] and [1] are different
@@ -394,6 +404,8 @@ Qed.
 
 Check (0 <> 1).
 (* ===> Prop *)
+
+(* CHX: see how <> , = are defined. *)
 
 Theorem zero_not_one' : 0 <> 1.
 Proof.
@@ -431,29 +443,26 @@ Proof.
    _Theorem_: [P] implies [~~P], for any proposition [P].
 
    _Proof_:
-(* FILL IN HERE *)
+   apply (P->False) to P, the hypothesis is "False", which implies everything.
    []
 *)
 
 (** **** Exercise: 2 stars, recommended (contrapositive)  *)
 Theorem contrapositive : forall P Q : Prop,
   (P -> Q) -> (~Q -> ~P).
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. unfold not. intros. apply H0. apply H. apply H1. Qed.
 (** [] *)
 
 (** **** Exercise: 1 star (not_both_true_and_false)  *)
 Theorem not_both_true_and_false : forall P : Prop,
   ~ (P /\ ~P).
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. unfold not. intros. destruct H. apply H0. apply H. Qed.
 (** [] *)
 
 (** **** Exercise: 1 star, advanced (informal_not_PNP)  *)
 (** Write an informal proof (in English) of the proposition [forall P
     : Prop, ~(P /\ ~P)]. *)
 
-(* FILL IN HERE *)
 (** [] *)
 
 (** Similarly, since inequality involves a negation, it requires a
@@ -536,10 +545,10 @@ Lemma not_true_iff_false : forall b,
   b <> true <-> b = false.
 Proof.
   (* WORKED IN CLASS *)
-  intros b. split.
+  intros b. split.              (* "unfold iff" in split. *)
   - (* -> *) apply not_true_is_false.
   - (* <- *)
-    intros H. rewrite H. intros H'. inversion H'.
+    intros H. rewrite H. intros H'. inversion H'. (* unfold not internally. *)
 Qed.
 
 (** **** Exercise: 1 star, optional (iff_properties)  *)
@@ -548,20 +557,36 @@ Qed.
 
 Theorem iff_refl : forall P : Prop,
   P <-> P.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. split; intros; apply H. Qed.
 
 Theorem iff_trans : forall P Q R : Prop,
   (P <-> Q) -> (Q <-> R) -> (P <-> R).
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. intros P Q R HPQ HQR. destruct HPQ as [PQ QP]. destruct HQR as [QR RQ].
+       split; intros.
+       - apply QR. apply PQ. apply H.
+       - apply QP. apply RQ. apply H.
+Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars (or_distributes_over_and)  *)
 Theorem or_distributes_over_and : forall P Q R : Prop,
   P \/ (Q /\ R) <-> (P \/ Q) /\ (P \/ R).
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. intros. split; intros.
+       - destruct H as [HP | HQR].
+         + split; left; apply HP.
+         + destruct HQR as [HQ HR]. split.
+           { right. apply HQ. }
+           { right. apply HR. }
+       - destruct H as [H_P_Q H_P_R].
+         destruct H_P_Q as [HP|HQ].
+         { left. apply HP. }
+         { destruct H_P_R as [HP|HR].
+           - left. apply HP.
+           - right. split.
+             + apply HQ.
+             + apply HR.
+         }
+Qed.       
 (** [] *)
 
 (** Some of Coq's tactics treat [iff] statements specially, avoiding
@@ -587,7 +612,7 @@ Lemma or_assoc :
   forall P Q R : Prop, P \/ (Q \/ R) <-> (P \/ Q) \/ R.
 Proof.
   intros P Q R. split.
-  - intros [H | [H | H]].
+  - intros [H | [H | H]].       (* recursive destruct. *)
     + left. left. apply H.
     + left. right. apply H.
     + right. apply H.
@@ -659,8 +684,7 @@ Proof.
 
 Theorem dist_not_exists : forall (X:Type) (P : X -> Prop),
   (forall x, P x) -> ~ (exists x, ~ P x).
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. unfold not. intros. destruct H0. apply H0. apply H. Qed.
 (** [] *)
 
 (** **** Exercise: 2 stars (dist_exists_or)  *)
@@ -669,8 +693,18 @@ Proof.
 
 Theorem dist_exists_or : forall (X:Type) (P Q : X -> Prop),
   (exists x, P x \/ Q x) <-> (exists x, P x) \/ (exists x, Q x).
-Proof.
-   (* FILL IN HERE *) Admitted.
+Proof. intros. split.
+       {
+         intros. destruct H as [x0 H']. destruct H' as [HP|HQ].
+         - left. exists x0. apply HP.
+         - right. exists x0. apply HQ.
+       }
+       {
+         intros. destruct H as [Hp|Hq].
+         - destruct Hp as [x0 Hp']. exists x0. left. apply Hp'.
+         - destruct Hq as [x0 Hq']. exists x0. right. apply Hq'.
+       }
+Qed.
 (** [] *)
 
 (* #################################################################### *)
@@ -711,12 +745,12 @@ Example In_example_2 :
   forall n, In n [2; 4] ->
   exists n', n = 2 * n'.
 Proof.
-  simpl.
-  intros n [H | [H | []]].
+  intros. destruct H as [H|[H|[]]].
   - exists 1. rewrite <- H. reflexivity.
   - exists 2. rewrite <- H. reflexivity.
 Qed.
 
+(* CHX: important. *)
 (** (Notice the use of the empty pattern to discharge the last case
     _en passant_.) *)
 
@@ -752,8 +786,23 @@ Lemma In_map_iff :
   forall (A B : Type) (f : A -> B) (l : list A) (y : B),
     In y (map f l) <->
     exists x, f x = y /\ In x l.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. intros. split.
+       {
+         intros. induction l as [|h t IHt].
+         - inversion H.
+         - inversion H.
+           + exists h. split. { apply H0. } { simpl. left.  reflexivity. }
+           + apply IHt in H0. destruct H0 as [x0 H0]. exists x0. destruct H0 as [H1 H2].
+             split. { apply H1. } { simpl. right. apply H2. }
+       }
+       {
+         intros. destruct H as [x0 H]. destruct H as [H1 H2]. induction l as [| h t IHt].
+         - inversion H2.
+         - inversion H2.
+           + simpl. rewrite <- H in H1. left.  apply H1.
+           + apply IHt in H. simpl. right. apply H.
+       }
+Qed.
 (** [] *)
 
 (** **** Exercise: 2 stars (in_app_iff)  *)
