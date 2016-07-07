@@ -808,8 +808,28 @@ Qed.
 (** **** Exercise: 2 stars (in_app_iff)  *)
 Lemma in_app_iff : forall A l l' (a:A),
   In a (l++l') <-> In a l \/ In a l'.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. intros. split;intros;induction l as [|h t].
+       - simpl in H. right. apply H.
+       - simpl in H. destruct H as [Hl | Hr].
+         + rewrite -> Hl. simpl. repeat left. reflexivity.
+         + apply IHt in Hr. simpl.
+           {
+             destruct Hr.
+             - left. right. intuition.
+             - right. intuition.
+           }
+       - simpl. destruct H as [Hl | Hr].
+         + inversion Hl.
+         + intuition.
+       - simpl. destruct H as [Hl | Hr].
+         + simpl in Hl.
+           {
+             destruct Hl.
+             - left. intuition.
+             - right. apply IHt. left. intuition.             
+           }
+         + right. apply IHt. intuition.
+Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars (All)  *)
@@ -824,14 +844,27 @@ Proof.
     restate the left-hand side of [All_In].) *)
 
 Fixpoint All {T} (P : T -> Prop) (l : list T) : Prop :=
-  (* FILL IN HERE *) admit.
+  match l with
+    | [] => True
+    | h::t => P h /\ All P t
+  end.
 
 Lemma All_In :
   forall T (P : T -> Prop) (l : list T),
     (forall x, In x l -> P x) <->
     All P l.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. split.
+       - intros.  induction l as [|h t IHt].
+         + reflexivity.
+         + simpl. split.
+           {             apply H. simpl. left. reflexivity.           }
+           {             apply IHt. intros. apply H. simpl. intuition.           }
+       - intros. induction l as [|h t IHt].
+         + inversion H0.
+         + simpl in H0. simpl in H. destruct H, H0.
+           {             rewrite -> H0 in H. intuition.           }
+           {             apply (IHt H1 H0).           }
+Qed.           
 (** [] *)
 
 (** **** Exercise: 3 stars (combine_odd_even)  *)
@@ -841,8 +874,11 @@ Proof.
     equivalent to [Podd n] when [n] is odd and equivalent to [Peven n]
     otherwise. *)
 
-Definition combine_odd_even (Podd Peven : nat -> Prop) : nat -> Prop :=
-  (* FILL IN HERE *) admit.
+Definition combine_odd_even (Podd Peven : nat -> Prop) : nat -> Prop := fun n =>
+  match (oddb n) with
+    | true => Podd n
+    | false => Peven n
+  end.
 
 (** To test your definition, prove the following facts: *)
 
@@ -851,24 +887,24 @@ Theorem combine_odd_even_intro :
     (oddb n = true -> Podd n) ->
     (oddb n = false -> Peven n) ->
     combine_odd_even Podd Peven n.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. intros. unfold combine_odd_even. destruct (oddb n).
+       - intuition.
+       - intuition.
+Qed.
 
 Theorem combine_odd_even_elim_odd :
   forall (Podd Peven : nat -> Prop) (n : nat),
     combine_odd_even Podd Peven n ->
     oddb n = true ->
     Podd n.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. intros. unfold combine_odd_even in H. rewrite -> H0 in H. intuition. Qed.
 
 Theorem combine_odd_even_elim_even :
   forall (Podd Peven : nat -> Prop) (n : nat),
     combine_odd_even Podd Peven n ->
     oddb n = false ->
     Peven n.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. unfold combine_odd_even. intros. rewrite -> H0 in H. intuition. Qed.
 (** [] *)
 
 (* #################################################################### *)
@@ -914,6 +950,8 @@ Check plus_comm.
     intermediate assertions.  For example, suppose we wanted to prove
     the following result: *)
 
+(* CHX: important. *)
+
 Lemma plus_comm3 :
   forall n m p, n + (m + p) = (p + m) + n.
 
@@ -949,7 +987,7 @@ Lemma plus_comm3_take2 :
 Proof.
   intros n m p.
   rewrite plus_comm.
-  rewrite (plus_comm m).
+  rewrite (plus_comm m p).
   reflexivity.
 Qed.
 
@@ -972,6 +1010,7 @@ Proof.
   rewrite mult_0_r in Hm. rewrite <- Hm. reflexivity.
 Qed.
 
+(* CHX: TODO understand it *)
 (** We will see many more examples of the idioms from this section in
     later chapters. *)
 

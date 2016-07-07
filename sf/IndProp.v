@@ -426,6 +426,15 @@ Proof.
     property inductively.  For example, here's a (slightly contrived)
     alternative definition for [ev]: *)
 
+Theorem not_ev_S: forall n, ev n <-> ~(ev (S n)).
+Proof. intros. split; unfold not; intros.
+       - induction H.
+         + inversion H0.
+         + inversion H0. apply IHev. intuition.
+       - destruct n as [|n'].
+         + apply ev_0.
+Abort.
+             
 Inductive ev' : nat -> Prop :=
 | ev'_0 : ev' 0
 | ev'_2 : ev' 2
