@@ -1102,6 +1102,7 @@ Qed.
     that it uses [functional_extensionality]: *)
 
 Print Assumptions plus_comm_ext.
+Print Assumptions plus_comm.
 (* ===>
      Axioms:
      functional_extensionality :
@@ -1130,8 +1131,14 @@ Definition tr_rev {X} (l : list X) : list X :=
     call); a decent compiler will generate very efficient code in this
     case.  Prove that both definitions are indeed equivalent. *)
 
+(* Lemma rev_append_eq : forall (X:Type) (l:list X) (e:X), rev l ++ [e] = e :: (rev l). *)
 
 Lemma tr_rev_correct : forall X, @tr_rev X = @rev X.
+Proof. intros. apply functional_extensionality. unfold tr_rev. induction x as [|h t IHt].
+       - simpl. reflexivity.
+       - simpl.
+
+         (* CHX: TODO *)
 (* FILL IN HERE *) Admitted.
 (** [] *)
 
@@ -1160,16 +1167,20 @@ Qed.
 Theorem evenb_double_conv : forall n,
   exists k, n = if evenb n then double k
                 else S (double k).
-Proof.
-  (* Hint: Use the [evenb_S] lemma from [Induction.v]. *)
-  (* FILL IN HERE *) Admitted.
+Proof. induction n as [|n'].
+       - simpl. exists 0. reflexivity.
+       - destruct IHn' as [k0 IH]. destruct (evenb n') eqn:evenb_n';rewrite -> evenb_S; rewrite -> evenb_n'; simpl.
+         + exists k0. apply f_equal. intuition.
+         + exists (S k0). simpl. apply f_equal. intuition.
+Qed.
+       
 (** [] *)
 
 Theorem even_bool_prop : forall n,
   evenb n = true <-> exists k, n = double k.
 Proof.
   intros n. split.
-  - intros H. destruct (evenb_double_conv n) as [k Hk].
+  - intros H. destruct (evenb_double_conv n) as [k Hk]. (* destruct an existential. *)
     rewrite Hk. rewrite H. exists k. reflexivity.
   - intros [k Hk]. rewrite Hk. apply evenb_double.
 Qed.
@@ -1216,8 +1227,8 @@ Fail Definition is_even_prime n :=
     elements of [bool] (or some other inductive type with two
     elements).  The reason for this error message has to do with the
     _computational_ nature of Coq's core language, which is designed
-    so that every function that it can express is computable and
-    total.  One reason for this is to allow the extraction of
+    so that every function that it can express is _computable_ and
+    _total_.  One reason for this is to allow the extraction of
     executable programs from Coq developments.  As a consequence,
     [Prop] in Coq does _not_ have a universal case analysis operation
     telling whether any given proposition is true or false, since such
@@ -1274,13 +1285,13 @@ Proof. apply even_bool_prop. reflexivity. Qed.
 
 Lemma andb_true_iff : forall b1 b2:bool,
   b1 && b2 = true <-> b1 = true /\ b2 = true.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. split; intros; destruct b1, b2; try (simpl; simpl in H; inversion H); try (simpl; repeat split; intuition).
+Qed.
 
 Lemma orb_true_iff : forall b1 b2,
   b1 || b2 = true <-> b1 = true \/ b2 = true.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. split; intros; destruct b1, b2; simpl; simpl in H; intuition.
+Qed.       
 (** [] *)
 
 (** **** Exercise: 1 star (beq_nat_false_iff)  *)
@@ -1290,8 +1301,19 @@ Proof.
 
 Theorem beq_nat_false_iff : forall x y : nat,
   beq_nat x y = false <-> x <> y.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. split; unfold not.
+       - intros. rewrite -> H0 in H. rewrite <- beq_nat_refl in H. inversion H.
+       - generalize dependent y. induction x as [|x'].
+         + intros. destruct y as [|y'].
+           { simpl. exfalso. apply H. reflexivity.  }
+           { simpl. reflexivity.  }
+         + destruct y as [|y']; simpl; intros.
+           { reflexivity.  }
+           { apply IHx'. intros. apply H. apply f_equal. rewrite -> H0. reflexivity.  }
+Qed.
+
+(* CHX: split will intros; be careful that sometimes generalize dependent is necessary.  *)
+
 (** [] *)
 
 (** **** Exercise: 3 stars (beq_list)  *)
@@ -1302,15 +1324,37 @@ Proof.
     definition is correct, prove the lemma [beq_list_true_iff]. *)
 
 Fixpoint beq_list {A} (beq : A -> A -> bool)
-                  (l1 l2 : list A) : bool :=
-  (* FILL IN HERE *) admit.
+         (l1 l2 : list A) : bool :=
+  match l1, l2 with
+    | [], [] => true
+    | h1::t1, h2::t2 => beq h1 h2 && beq_list beq t1 t2
+    | _, _ => false
+  end.
 
 Lemma beq_list_true_iff :
   forall A (beq : A -> A -> bool),
     (forall a1 a2, beq a1 a2 = true <-> a1 = a2) ->
     forall l1 l2, beq_list beq l1 l2 = true <-> l1 = l2.
-Proof.
-(* FILL IN HERE *) Admitted.
+Proof. split; intros; generalize dependent l2.
+       - induction l1 as [|h1 t1].
+         + induction l2 as [|h2 t2].
+           { reflexivity.  }
+           { intros. inversion H0.  }
+         + induction l2 as [|h2 t2]; intros.
+           { inversion H0.  }
+           {
+             inversion H0. rewrite -> andb_true_iff in H2. destruct H2 as [H21 H22].
+             apply H in H21. rewrite -> H21. apply f_equal. apply IHt1 in H22. apply H22.
+           }
+       - induction l1 as [|h1 t1]; intros.
+         + rewrite <- H0. reflexivity.
+         + induction l2 as [|h2 t2].
+           { inversion H0.  }
+           { inversion H0. simpl. apply H in H2. apply andb_true_iff. split.
+             - simpl. apply H. reflexivity.
+             - apply IHt1 in H3. inversion H0. rewrite -> H5 in H3. apply H3.
+           }
+Qed.
 (** [] *)
 
 (** **** Exercise: 2 stars, recommended (All_forallb)  *)
@@ -1328,13 +1372,21 @@ Fixpoint forallb {X : Type} (test : X -> bool) (l : list X) : bool :=
 
 Theorem forallb_true_iff : forall X test (l : list X),
    forallb test l = true <-> All (fun x => test x = true) l.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. split; simpl; intros; simpl; induction l as [|h t].
+         + reflexivity.
+         + simpl in *. rewrite -> andb_true_iff in H. destruct H as [Hl Hr]. apply IHt in Hr.
+           split.
+           { apply Hl.  }
+           { apply Hr.  }
+         + simpl. reflexivity.
+         + simpl in *. rewrite -> andb_true_iff. destruct H as [Hl Hr]. apply IHt in Hr. split.
+           { apply Hl. }
+           { apply Hr. }
+Qed.
 
 (** Are there any important properties of the function [forallb] which
     are not captured by your specification? *)
 
-(* FILL IN HERE *)
 (** [] *)
 
 (** ** Classical vs. Constructive Logic *)
@@ -1344,6 +1396,8 @@ Proof.
     surprised to learn that a similar restriction applies to _proofs_!
     In other words, the following intuitive reasoning principle is not
     derivable in Coq: *)
+
+(* "if n=2" fails. *)
 
 Definition excluded_middle := forall P : Prop,
   P \/ ~ P.
@@ -1364,7 +1418,7 @@ Definition excluded_middle := forall P : Prop,
 Theorem restricted_excluded_middle : forall P b,
   (P <-> b = true) -> P \/ ~ P.
 Proof.
-  intros P [] H.
+  intros P [] H.                (* P; b; HP; *)
   - left. rewrite H. reflexivity.
   - right. rewrite H. intros contra. inversion contra.
 Qed.
@@ -1447,8 +1501,9 @@ Qed.
 
 Theorem excluded_middle_irrefutable:  forall (P:Prop),
   ~ ~ (P \/ ~ P).
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. unfold not. intros. apply H. right. intros. apply H. left. apply H0.
+Qed.
+
 (** [] *)
 
 (** **** Exercise: 3 stars, optional (not_exists_dist)  *)
@@ -1467,8 +1522,13 @@ Theorem not_exists_dist :
   excluded_middle ->
   forall (X:Type) (P : X -> Prop),
     ~ (exists x, ~ P x) -> (forall x, P x).
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. unfold not. intros. unfold excluded_middle in H. unfold not in H.
+       assert (HPx : P x \/ (P x -> False)).
+       apply H.
+       inversion HPx.
+       - apply H1.
+       - exfalso. apply H0. exists x. apply H1.
+Qed.
 (** [] *)
 
 (** **** Exercise: 5 stars, advanced, optional (classical_axioms)  *)
@@ -1492,9 +1552,26 @@ Definition de_morgan_not_and_not := forall P Q:Prop,
   ~(~P /\ ~Q) -> P\/Q.
   
 Definition implies_to_or := forall P Q:Prop,
-  (P->Q) -> (~P\/Q).
+                              (P->Q) -> (~P\/Q).
 
-(* FILL IN HERE *)
+Theorem excluded_middle_AND_peirce : excluded_middle <-> peirce.
+Admitted.
+
+Theorem excluded_middle_AND_double_gegation_elimination : excluded_middle <-> double_negation_elimination.
+Proof. unfold excluded_middle. unfold double_negation_elimination. unfold not. split; intros.
+       - assert (HP : P \/ ~ P). apply H. inversion HP.
+         + apply H1.
+         + exfalso. apply H0. apply H1.
+       - intros. assert (HP : ((P->False)->False)->P). apply H. assert (HNP : ((~P->False)->False)->(~P)).
+         apply H. unfold not in *. right. apply HNP. intros. apply H0. intros. apply H0. apply HNP.
+Admitted.
+
+Theorem excluded_middle_AND_de_morgan_not_and_not : excluded_middle <-> de_morgan_not_and_not.
+Admitted.
+
+Theorem excluded_middle_AND_implies_to_or : excluded_middle <-> implies_to_or.
+Admitted.
+
 (** [] *)
 
 (** $Date: 2015-08-11 12:03:04 -0400 (Tue, 11 Aug 2015) $ *)
