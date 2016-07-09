@@ -114,6 +114,7 @@ Proof. apply ev_SS. apply ev_SS. apply ev_0. Qed.
 
 Theorem ev_4' : ev 4.
 Proof. apply (ev_SS 2 (ev_SS 0 ev_0)). Qed.
+(* CHX:!!! *)
 
 (** We can also prove theorems that have hypotheses involving [ev]. *)
 
@@ -128,8 +129,10 @@ Qed.
 (** **** Exercise: 1 star (ev_double)  *)
 Theorem ev_double : forall n,
   ev (double n).
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. induction n as [|n'].
+       - simpl. apply ev_0.
+       - simpl. apply ev_SS. apply IHn'.
+Qed.
 (** [] *)
 
 (* ####################################################### *)
@@ -168,7 +171,7 @@ Proof.
 Theorem evenb_minus2: forall n,
   evenb n = true -> evenb (pred (pred n)) = true.
 Proof.
-  intros [ | [ | n' ] ].
+  intros [ | [ | n' ] ].       (* split into 0, 1 and n'+2 (n' is a nat). *)
   - (* n = 0 *) reflexivity.
   - (* n = 1; contradiction *) intros H. inversion H.
   - (* n = n' + 2 *) simpl. intros H. apply H.
@@ -220,6 +223,7 @@ Proof.
 
 (** Note that, in this particular case, it is also possible to replace
     [inversion] by [destruct]: *)
+(* not always. *)
 
 Theorem ev_minus2' : forall n,
   ev n -> ev (pred (pred n)).
@@ -230,7 +234,7 @@ Proof.
   - (* E = ev_SS n' E' *) simpl. apply E'.  Qed.
 
 (** The difference between the two forms is that [inversion] is more
-    convenient when used on a hypothesis that consists of an inductive
+    _convenient_ when used on a hypothesis that consists of an inductive
     property applied to a complex expression (as opposed to a single
     variable).  Here's is a concrete example.  Suppose that we wanted
     to prove the following variation of [ev_minus2]: *)
@@ -288,13 +292,12 @@ Proof.
 
 Theorem SSSSev__even : forall n,
   ev (S (S (S (S n)))) -> ev n.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. intros.
+       inversion H. inversion H1. apply H3. Qed.
 
 Theorem even5_nonsense :
   ev 5 -> 2 + 2 = 9.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. intros. inversion H. inversion H1. inversion H3. Qed.
 (** [] *)
 
 (** The way we've used [inversion] here may seem a bit
@@ -417,23 +420,16 @@ Qed.
 
 (** **** Exercise: 2 stars (ev_sum)  *)
 Theorem ev_sum : forall n m, ev n -> ev m -> ev (n + m).
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. intros n m Hevn Hevm. induction Hevn.
+       - simpl. apply Hevm.
+       - simpl. apply (ev_SS (n+m) IHHevn).
+Qed.
 (** [] *)
 
 (** **** Exercise: 4 stars, advanced (ev_alternate)  *)
 (** In general, there may be multiple ways of defining a
     property inductively.  For example, here's a (slightly contrived)
     alternative definition for [ev]: *)
-
-Theorem not_ev_S: forall n, ev n <-> ~(ev (S n)).
-Proof. intros. split; unfold not; intros.
-       - induction H.
-         + inversion H0.
-         + inversion H0. apply IHev. intuition.
-       - destruct n as [|n'].
-         + apply ev_0.
-Abort.
              
 Inductive ev' : nat -> Prop :=
 | ev'_0 : ev' 0
@@ -444,8 +440,15 @@ Inductive ev' : nat -> Prop :=
     the old one. *)
 
 Theorem ev'_ev : forall n, ev' n <-> ev n.
-Proof.
- (* FILL IN HERE *) Admitted.
+Proof. split; intros.
+       - induction H.
+         + apply ev_0.
+         + apply (ev_SS 0 (ev_0)).
+         + apply (ev_sum n m IHev'1 IHev'2).
+       - induction H.
+         + apply ev'_0.
+         + apply (ev'_sum 2 n (ev'_2) IHev).
+Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars, advanced, recommended (ev_ev__ev)  *)
@@ -454,8 +457,10 @@ Proof.
 
 Theorem ev_ev__ev : forall n m,
   ev (n+m) -> ev n -> ev m.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. intros n m Hnm Hn. induction Hn; simpl in *.
+       - apply Hnm.
+       - apply evSS_ev in Hnm. apply (IHHn Hnm).
+Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars, optional (ev_plus_plus)  *)
@@ -465,8 +470,21 @@ Proof.
 
 Theorem ev_plus_plus : forall n m p,
   ev (n+m) -> ev (n+p) -> ev (m+p).
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. intros n m p Hnm Hnp. assert (H : ev (n + n + (m + p))).
+       {
+         assert (H' : n+n+(m+p)=n+m+(n+p)).
+         {
+           repeat rewrite -> plus_assoc. rewrite -> (plus_comm (n+m) n). rewrite -> plus_assoc. reflexivity.
+         }
+         assert (Hev' : ev (n + m + (n+p))). apply (ev_sum (n+m) (n+p) Hnm Hnp).
+         rewrite -> H'. apply Hev'.
+       }
+       assert (Hn : ev (n+n)).
+       {
+         clear. rewrite <- double_plus. apply ev_double.
+       }
+       apply (ev_ev__ev (n+n) (m+p) H Hn).
+Qed.
 (** [] *)
 
 (* ####################################################### *)
@@ -554,14 +572,18 @@ Inductive next_even : nat -> nat -> Prop :=
 (** Define an inductive binary relation [total_relation] that holds
     between every pair of natural numbers. *)
 
-(* FILL IN HERE *)
+Inductive total_relation : nat->nat->Prop :=
+| teq : forall n m, n=m -> total_relation n m
+| tlt : forall n m, total_relation n m -> total_relation n (S m)
+| tgt : forall n m, total_relation n m -> total_relation (S n) m.
 (** [] *)
 
 (** **** Exercise: 2 stars (empty_relation)  *)
 (** Define an inductive binary relation [empty_relation] (on numbers)
     that never holds. *)
+Inductive empty_relation : nat->nat->Prop :=
+  | MyEmpty : forall n, n<>n -> empty_relation n n.
 
-(* FILL IN HERE *)
 (** [] *)
 
 (** **** Exercise: 3 stars, optional (le_exercises)  *)
@@ -570,7 +592,12 @@ Inductive next_even : nat -> nat -> Prop :=
     practice exercises. *)
 
 Lemma le_trans : forall m n o, m <= n -> n <= o -> m <= o.
-Proof.
+Proof. intros m n o mn no.
+       induction mn.
+       - apply no.
+       - apply IHmn. inversion no.
+         + apply le_S. apply le_n.
+         
   (* FILL IN HERE *) Admitted.
 
 Theorem O_le_n : forall n,
