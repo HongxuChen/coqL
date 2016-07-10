@@ -48,6 +48,8 @@ Print ev.
     0].  Instead of "[ev_0] has type [ev 0]," we can say that "[ev_0]
     is a proof of [ev 0]." *)
 
+(* CHX: ev_0 can be viewed as a proof, this is same as a theorem. *)
+
 (** This pun between types and propositions -- between [:] as "has type"
     and [:] as "is a proof of" or "is evidence for" -- is called the
     _Curry-Howard correspondence_.  It proposes a deep connection
@@ -129,8 +131,8 @@ Qed.
     Coq operates.  When Coq is following a proof script, what is
     happening internally is that it is gradually constructing a proof
     object -- a term whose type is the proposition being proved.  The
-    tactics between [Proof] and [Qed] tell it how to build up a term
-    of the required type.  To see this process in action, let's use
+    tactics between [Proof] and [Qed] tell it how to _build up a term
+    of the required type_.  To see this process in action, let's use
     the [Show Proof] command to display the current state of the proof
     tree at various points in the following tactic proof. *)
 
@@ -179,11 +181,9 @@ Print ev_4'''.
 (** Give a tactic proof and a proof object showing that [ev 8]. *)
 
 Theorem ev_8 : ev 8.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. repeat apply ev_SS. apply ev_0. Qed.
 
-Definition ev_8' : ev 8 :=
-  (* FILL IN HERE *) admit.
+Definition ev_8' : ev 8 :=  ev_SS 6 (ev_SS 4 (ev_SS 2 (ev_SS 0 ev_0))).
 (** [] *)
 
 (* ##################################################### *)
@@ -241,11 +241,19 @@ Check ev_plus4''.
     programming too, as recent work in the functional programming
     community demonstrates.
 
+(* the type of [ev_plus4] is DEPENDENT on the value of [n], which means its type is a
+ _dependent type_.*)
+
     Notice that both implication ([->]) and quantification ([forall])
     correspond to functions on evidence.  In fact, they are really the
     same thing: [->] is just a shorthand for a degenerate use of
     [forall] where there is no dependency, i.e., no need to give a
-    name to the type on the LHS of the arrow. *)
+    name to the _type_ on the LHS of the arrow. *)
+
+(* CHX: we CANNOT, for example, use arrows for "X:Type" in list related defitions since
+ we have to rely on the type name X.*)
+
+(* CHX: important. *)
 
 (** For example, consider this proposition: *)
 
@@ -293,6 +301,8 @@ Module And.
 Inductive and (P Q : Prop) : Prop :=
 | conj : P -> Q -> and P Q.
 
+(* CHX: both P and Q are evidences; a general "and" is simply "/\". *)
+
 End And.
 
 (** Notice the similarity with the definition of the [prod] type,
@@ -334,11 +344,32 @@ Definition and_comm'_aux P Q (H : P /\ Q) :=
 Definition and_comm' P Q : P /\ Q <-> Q /\ P :=
   conj (and_comm'_aux P Q) (and_comm'_aux Q P).
 
+(* <-> is also contains a "/\" *)
+
+(* CHX: and_comm' is a direct (without tactics) *)
+
 (** **** Exercise: 2 stars, optional (conj_fact)  *)
 (** Construct a proof object demonstrating the following proposition. *)
 
+Theorem conj_fact_theorem : forall P Q R, P/\Q->Q/\R->P/\R.
+Proof. intros P Q R [HP1 HQ1] [HQ2 HR2]. split.
+       - apply HP1.
+       - apply HR2.
+Qed.
+
 Definition conj_fact : forall P Q R, P /\ Q -> Q /\ R -> P /\ R :=
-  (* FILL IN HERE *) admit.
+  fun (P Q R: Prop) (PQ: P/\Q) (QR: Q/\R) =>
+    match PQ with
+      | conj HP1 HQ1 => match QR with
+                         | conj HQ2 HR2 => conj HP1 HR2
+                       end
+    end.
+
+Check conj_fact_theorem.
+Check conj_fact.
+(* both of them have type: forall P Q R, P/\Q->Q/\R->P/\R; however they are two
+ DIFFERENT instances; use Print to find the differences.*)
+  
 (** [] *)
 
 (** ** Disjunction
@@ -351,6 +382,13 @@ Module Or.
 Inductive or (P Q : Prop) : Prop :=
 | or_introl : P -> or P Q
 | or_intror : Q -> or P Q.
+
+Check or_introl.                (* forall P Q:Prop, P->or P Q *)
+Print or_introl.                (* definition of or *)
+Check or_intror.                (* forall P Q:Prop, Q->or P Q *)
+Print or_intror.                (* definition of or *)
+Check or.                       (* Prop->Prop->Prop *)
+Print or.
 
 End Or.
 
@@ -366,7 +404,14 @@ End Or.
     using [Print] to peek at the ones we already defined!). *)
 
 Definition or_comm : forall P Q, P \/ Q -> Q \/ P :=
-  (* FILL IN HERE *) admit.
+  fun (P Q : Prop) (P_Q: P\/Q) =>
+    match P_Q with
+      | or_introl p => or_intror p
+      | or_intror q => or_introl q
+    end.
+
+Check or_comm.
+Check forall P Q, P\/Q.
 (** [] *)
 
 (** ** Existential Quantification
@@ -378,7 +423,7 @@ Definition or_comm : forall P Q, P \/ Q -> Q \/ P :=
 Module Ex.
 
 Inductive ex {A : Type} (P : A -> Prop) : Prop :=
-| ex_intro : forall x : A, P x -> ex P.
+| ex_intro : forall x : A, P x -> ex P. (* x is the witness. *)
 
 End Ex.
 
@@ -392,20 +437,43 @@ End Ex.
     The more familiar form [exists x, P x] desugars to an expression
     involving [ex]: *)
 
+Check ex.                       (* forall A:Type, (A->Prop)->Prop *)
+Check fun n => ev n.
+Check ex (fun n => n=3).
 Check ex (fun n => ev n).
 (* ===> exists n : nat, ev n
         : Prop *)
 
 (** Here's how to define an explicit proof object involving [ex]: *)
 
+Check ex_intro ev 4.
 Definition some_nat_is_even : exists n, ev n :=
   ex_intro ev 4 (ev_SS 2 (ev_SS 0 ev_0)).
 
 (** **** Exercise: 2 stars, optional (ex_ev_Sn)  *)
 (** Complete the definition of the following proof object: *)
+Check ex (fun x => ev (S x)).
+Check ex_intro.                 (* forall (A:Type) (P:A->Prop) (x:A), Px->exists x,  P x *)
+(* --- *)
+Print ev.
+Check ev.              (* nat->Prop *)
+Check ex_intro ev.              (* forall x:nat, ev x -> exists x, ev x *)
+(* CHX: since using {A:Type}, A is implicit (inferenced);
+        since ev:nat->Prop, A is inferenced to be nat;
+        since ev has been applied, type is remainings.*)
+Check ex_intro ev 2.            (* x is applied. *)
+Check ex_intro ev 2 (ev_SS 0 ev_0). (* the evidence is applied. *)
+(* --- *)
+Check (fun n => ev (S n)).           (* nat->Prop *)
+Check (ex_intro (fun n => ev (S n))). (* forall x:nat, ev (S x) -> exists n:nat, ev (S n). *)
+Check ev_SS 0 ev_0.                (* should be of type (ev 2), where x is 1 *)
+Check (ex_intro (fun n => ev (S n)) 1 (ev_SS 0 ev_0)).
+
+Theorem  ex_ev_Sn_theorem : ex (fun n => ev(S n)).
+Proof. exists 1. apply ev_SS. apply ev_0. Qed.
 
 Definition ex_ev_Sn : ex (fun n => ev (S n)) :=
-(* FILL IN HERE *) admit.
+  ex_intro (fun n => ev (S n)) 1 (ev_SS 0 ev_0).
 (** [] *)
 
 (** ** [True] and [False] *)
@@ -436,6 +504,8 @@ End Props.
     build _programs_ using _tactics_ rather than explicit terms.
     Naturally, the answer is yes! *)
 
+Definition add_xx : nat -> nat := fun n => S n.
+Definition add_xxx (n:nat) :nat := S n.
 Definition add1 : nat -> nat.
 intro n.
 Show Proof.
@@ -497,8 +567,10 @@ Notation "x = y" := (eq x y)
 
 Lemma leibniz_equality : forall (X : Type) (x y: X),
   x = y -> forall P:X->Prop, P x -> P y.
-Proof.
-(* FILL IN HERE *) Admitted.
+Proof. intros X x y Heq P HPx. inversion Heq as [x' HH1 HH2]. rewrite <- HH2. apply HPx. Qed.
+(* CHX: we are unable to rewrite Heq here since "=" in Heq is defined inside MyEquality, which ISN'T
+ the regular "=".*)
+
 (** [] *)
 
 (** We can use [eq_refl] to construct evidence that, for example, [2 =
@@ -552,19 +624,26 @@ Definition quiz6 : exists x,  x + 3 = 4
 
       - generates a new subgoal in which we assume [H] was
         built with [C],
+(* new goal *)
 
       - adds the arguments (premises) of [C] to the context of
         the subgoal as extra hypotheses,
+(* premises *)
 
       - matches the conclusion (result type) of [C] against the
         current goal and calculates a set of equalities that must
         hold in order for [C] to be applicable,
+(* conclusion  *)
 
       - adds these equalities to the context (and, for convenience,
         rewrites them in the goal), and
+(* equality *)
 
       - if the equalities are not satisfiable (e.g., they involve
-        things like [S n = O]), immediately solves the subgoal. *)
+        things like [S n = O]), immediately solves the subgoal.
+ (* remove *)
+ *)
+
 
 (** _Example_: If we invert a hypothesis built with [or], there are two
    constructors, so two subgoals get generated.  The
