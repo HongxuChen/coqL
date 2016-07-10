@@ -593,71 +593,93 @@ Inductive empty_relation : nat->nat->Prop :=
 
 Lemma le_trans : forall m n o, m <= n -> n <= o -> m <= o.
 Proof. intros m n o mn no.
-       induction mn.
-       - apply no.
-       - apply IHmn. inversion no.
-         + apply le_S. apply le_n.
-         
-  (* FILL IN HERE *) Admitted.
+       induction no.
+       - apply mn.
+       - apply le_S. apply IHno.
+Qed.
+(* CHX: focus on succ *)
 
 Theorem O_le_n : forall n,
   0 <= n.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. intros. induction n as [|n'].
+       - apply (le_n 0).
+       - apply le_S. apply IHn'.
+Qed.
 
 Theorem n_le_m__Sn_le_Sm : forall n m,
   n <= m -> S n <= S m.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. intros. induction H as [Heq|o H' IHle].
+       - apply (le_n (S n)).
+       - apply (le_S (S n) (S o) IHle).
+Qed.
 
 Theorem Sn_le_Sm__n_le_m : forall n m,
   S n <= S m -> n <= m.
-Proof.
-  (* FILL IN HERE *) Admitted.
-
+Proof. intros. inversion H as [Heq|o Hle Hom].
+       - apply le_n.
+       - clear o Hom. assert (HleS : n <= S n).
+         { apply (le_S n n (le_n n)).  }
+         apply (le_trans n (S n) m HleS Hle).
+Qed.
+  
 Theorem le_plus_l : forall a b,
   a <= a + b.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. intros. induction b as [|b'].
+       - rewrite <- plus_n_O. apply (le_n a).
+       - rewrite <- (plus_n_Sm a b'). apply (le_S a (a+b') IHb').
+Qed.                            (* CHX: there is no (apply xxx in Hxxx). *)
 
 Theorem plus_lt : forall n1 n2 m,
   n1 + n2 < m ->
   n1 < m /\ n2 < m.
 Proof.
- unfold lt.
- (* FILL IN HERE *) Admitted.
+  unfold lt. intros. split.
+  - induction H.
+    + apply n_le_m__Sn_le_Sm. apply le_plus_l.
+    + apply le_S. apply IHle.
+  - induction H.
+    + apply n_le_m__Sn_le_Sm. rewrite -> plus_comm. apply le_plus_l.
+    + apply le_S. apply IHle.
+Qed.
 
 Theorem lt_S : forall n m,
   n < m ->
   n < S m.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. unfold lt. intros. apply (le_S (S n) m H). Qed.
 
 Theorem leb_complete : forall n m,
   leb n m = true -> n <= m.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. induction n as [|n'].
+       - intros. apply O_le_n.
+       - induction m as [|m'].
+         + simpl. intros. inversion H.
+         + simpl. intros. apply n_le_m__Sn_le_Sm. apply (IHn' m' H).
+Qed.
 
 (** Hint: The next one may be easiest to prove by induction on [m]. *)
 
 Theorem leb_correct : forall n m,
   n <= m ->
   leb n m = true.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. induction n as [|n'].
+       - reflexivity.
+       - intros. induction m as [|m'].
+         + inversion H.
+         + simpl. apply IHn'. apply Sn_le_Sm__n_le_m. apply H.
+Qed.
 
 (** Hint: This theorem can easily be proved without using [induction]. *)
 
 Theorem leb_true_trans : forall n m o,
   leb n m = true -> leb m o = true -> leb n o = true.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. intros. apply (leb_complete n m) in H. apply (leb_complete m o) in H0.
+       apply (leb_correct n o (le_trans n m o H H0)).
+Qed.
 
 (** **** Exercise: 2 stars, optional (leb_iff)  *)
 Theorem leb_iff : forall n m,
   leb n m = true <-> n <= m.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. split. apply leb_complete. apply leb_correct. Qed.
 (** [] *)
 
 Module R.
@@ -675,18 +697,23 @@ Inductive R : nat -> nat -> nat -> Prop :=
    | c5 : forall m n o, R m n o -> R n m o.
 
 (** - Which of the following propositions are provable?
-      - [R 1 1 2]
+      + [R 1 1 2]
       - [R 2 2 6]
 
     - If we dropped constructor [c5] from the definition of [R],
       would the set of provable propositions change?  Briefly (1
       sentence) explain your answer.
 
+no.
+
     - If we dropped constructor [c4] from the definition of [R],
       would the set of provable propositions change?  Briefly (1
       sentence) explain your answer.
 
-(* FILL IN HERE *)
+no.
+
+(CHX: how to explain?)
+
 []
 *)
 
@@ -695,12 +722,26 @@ Inductive R : nat -> nat -> nat -> Prop :=
     Figure out which function; then state and prove this equivalence
     in Coq? *)
 
-Definition fR : nat -> nat -> nat :=
-  (* FILL IN HERE *) admit.
+Definition fR : nat -> nat -> nat := fun m n => m+n.
 
 Theorem R_equiv_fR : forall m n o, R m n o <-> fR m n = o.
-Proof.
-(* FILL IN HERE *) Admitted.
+Proof. split; unfold fR.
+       - intros. induction H.
+         + reflexivity.
+         + simpl. apply f_equal. apply IHR.
+         + rewrite <- plus_n_Sm. apply f_equal. apply IHR.
+         + simpl in IHR. rewrite <- plus_n_Sm in IHR. inversion IHR. reflexivity.
+         + rewrite -> plus_comm. apply IHR.
+       - generalize dependent o. generalize dependent m. induction n as [|n'].
+         + induction m as [|m'].
+           {
+             intros. rewrite <- H. apply c1.
+           }
+           {
+             intros. rewrite <- plus_n_O in *. rewrite <- H. apply c2. apply (IHm' m'). reflexivity.
+           }
+         + intros. rewrite <- H. rewrite <- plus_n_Sm. apply c3. apply (IHn' m (m+n')). reflexivity.
+Qed.
 (** [] *)
 
 End R.
@@ -741,7 +782,36 @@ End R.
       is a subsequence of [l3], then [l1] is a subsequence of [l3].
       Hint: choose your induction carefully! *)
 
-(* FILL IN HERE *)
+Inductive subseq {X:Type} : list X -> list X -> Prop :=
+| sub_nil: forall l, subseq [] l
+| sub_cons_r : forall l1 l2 x, subseq l1 l2 -> subseq l1 (x::l2)
+| sub_cons_lr : forall l1 l2 x, subseq l1 l2 ->  subseq (x::l1) (x::l2).
+
+Theorem subseq_refl : forall (X:Type) (l:list X), subseq l l.
+Proof. induction l as [|l'].
+       - apply sub_nil.
+       - apply sub_cons_lr. apply IHl.
+Qed.
+
+Check app.
+
+Theorem subseq_app : forall (X:Type) (l1 l2 l3:list X), subseq l1 l2 -> subseq l1 (l2++l3).
+Proof. intros. induction H.
+       - apply sub_nil.
+       - assert (H' : (x::l2)++l3=x::(l2++l3)). reflexivity. rewrite -> H'. apply (sub_cons_r l1 (l2++l3) x IHsubseq).
+       - assert (H' : (x::l2)++l3=x::(l2++l3)). reflexivity. rewrite -> H'. apply (sub_cons_lr l1 (l2++l3) x IHsubseq).
+Qed.
+
+Theorem subseq_trans : forall (X:Type) (l1 l2 l3:list X), subseq l1 l2 -> subseq l2 l3 -> subseq l1 l3.
+Proof. intros X l1 l2 l3 H12 l23. generalize dependent l1. induction l23.
+       - intros. inversion H12. apply sub_nil.
+       - intros. apply (sub_cons_r l0 l2 x (IHl23 l0 H12)).
+       - intros. inversion H12.
+         + apply sub_nil.
+         + apply IHl23 in H1. apply (sub_cons_r l0 l2 x H1).
+         + apply IHl23 in H1. apply (sub_cons_lr l3 l2 x H1).
+Qed.
+
 (** [] *)
 
 (** **** Exercise: 2 stars, optional (R_provability)  *)
@@ -754,9 +824,9 @@ End R.
 
     Which of the following propositions are provable?
 
-    - [R 2 [1;0]]
+    + [R 2 [1;0]]
     - [R 1 [1;2;1;0]]
-    - [R 6 [3;2;1;0]]  *)
+    + [R 6 [3;2;1;0]]  *)
 
 (** [] *)
 
@@ -778,6 +848,7 @@ End R.
     of the constructors should become clear once we explain their
     meaning below.)  *)
 
+(* CHX: this definition (for Type) is not using {T:Type}, similar with list! *)
 Inductive reg_exp (T : Type) : Type :=
 | EmptySet : reg_exp T
 | EmptyStr : reg_exp T
@@ -888,6 +959,7 @@ Notation "s =~ re" := (exp_match s re) (at level 80).
     would have the effect of some string matching
     [EmptySet].  (Indeed, the syntax of inductive definitions doesn't
     even _allow_ us to give such a "negative rule.")
+(* CHX: that's CONSTRUCTIVE *)
 
     Furthermore, the informal rules for [Union] and [Star] correspond
     to two constructors each: [MUnionL] / [MUnionR], and [MStar0] /
@@ -909,7 +981,7 @@ Qed.
 
 Example reg_exp_ex2 : [1; 2] =~ App (Char 1) (Char 2).
 Proof.
-  apply (MApp [1] _ [2]).
+  apply (MApp [1] _ [2]).       (* CHX: _ is inferenced *)
   - apply MChar.
   - apply MChar.
 Qed.
@@ -959,10 +1031,10 @@ Lemma MStar1 :
     s =~ Star re.
 Proof.
   intros T s re H.
-  rewrite <- (app_nil_r _ s).
+  rewrite <- (app_nil_r T s).
   apply (MStarApp s [] re).
   - apply H.
-  - apply MStar0.
+  - apply MStar0.               (* make [] match Star. *)
 Qed.
 
 (** (Note the use of [app_nil_r] to change the goal of the theorem to
@@ -975,14 +1047,15 @@ Qed.
 
 Lemma empty_is_empty : forall T (s : list T),
   ~ (s =~ EmptySet).
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. unfold not. intros. inversion H. Qed.
 
 Lemma MUnion' : forall T (s : list T) (re1 re2 : reg_exp T),
   s =~ re1 \/ s =~ re2 ->
   s =~ Union re1 re2.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. intros. destruct H as [H1 | H2].
+       - apply (MUnionL s re1 re2 H1).
+       - apply (MUnionR re1 s re2 H2).
+Qed.
 
 (** The next lemma is stated in terms of the [fold] function from the
     [Poly] chapter: If [ss : list (list T)] represents a sequence of
@@ -992,8 +1065,15 @@ Proof.
 Lemma MStar' : forall T (ss : list (list T)) (re : reg_exp T),
   (forall s, In s ss -> s =~ re) ->
   fold app ss [] =~ Star re.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. induction ss as [|hs ts IHts].
+       - intros. simpl. apply MStar0.
+       - intros. simpl. apply MStarApp.
+         + apply H. simpl. left. reflexivity.
+         + apply IHts. intros. assert (H' : In s (hs::ts)).
+           { simpl. right. apply H0.  }
+           apply (H s H').
+Qed.
+         
 (** [] *)
 
 (** **** Exercise: 4 stars (reg_exp_of_list)  *)
@@ -1003,8 +1083,16 @@ Proof.
 
 Lemma reg_exp_of_list_spec : forall T (s1 s2 : list T),
   s1 =~ reg_exp_of_list s2 <-> s1 = s2.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. split; intros; generalize dependent s1; induction s2 as [|h2 t2 IHt2]; simpl in *.
+       - intros. inversion H. reflexivity.
+       - intros. inversion H. inversion H3. simpl. apply f_equal. apply (IHt2 s2 H4).
+       (* reverse from here *)
+       - intros. rewrite -> H. apply MEmpty.
+       - intros. rewrite -> H.
+         assert (HList : h2::t2=[h2]++t2). reflexivity. rewrite -> HList. apply MApp.
+         { apply MChar.  }
+         { apply IHt2. reflexivity.  }
+Qed.
 (** [] *)
 
 (** Since the definition of [exp_match] has a recursive
@@ -1035,11 +1123,13 @@ Theorem in_re_match : forall T (s : list T) (re : reg_exp T) (x : T),
 Proof.
   intros T s re x Hmatch Hin.
   induction Hmatch
-    as [
-        |x'
-        |s1 re1 s2 re2 Hmatch1 IH1 Hmatch2 IH2
-        |s1 re1 re2 Hmatch IH|re1 s2 re2 Hmatch IH
-        |re|s1 s2 re Hmatch1 IH1 Hmatch2 IH2].
+    as [                        (* MEmpty *)
+        |x'                     (* MChar *)
+        |s1 re1 s2 re2 Hmatch1 IH1 Hmatch2 IH2 (* MApp *)
+        |s1 re1 re2 Hmatch IH                  (* MUnionL *)
+        |re1 s2 re2 Hmatch IH                  (* MUnionR *)
+        |re                                    (* MStar0 *)
+        |s1 s2 re Hmatch1 IH1 Hmatch2 IH2].    (* MStarApp *)
   (* WORKED IN CLASS *)
   - (* MEmpty *)
     apply Hin.
@@ -1089,7 +1179,9 @@ Fixpoint re_not_empty {T} (re : reg_exp T) : bool :=
 Lemma re_not_empty_correct : forall T (re : reg_exp T),
   (exists s, s =~ re) <-> re_not_empty re = true.
 Proof.
-  (* FILL IN HERE *) Admitted.
+(* FILL IN HERE *) Admitted.
+
+(* CHX: TODO *)
 (** [] *)
 
 (** ** The [remember] Tactic *)
@@ -1222,7 +1314,22 @@ Lemma MStar'' : forall T (s : list T) (re : reg_exp T),
   exists ss : list (list T),
     s = fold app ss []
     /\ forall s', In s' ss -> s' =~ re.
-Proof.
+Proof. intros. remember (Star re) as Hre.
+       induction H; simpl.
+       - inversion HeqHre.      (* MEmpty *)
+       - inversion HeqHre.      (* MChar *)
+       - inversion HeqHre.      (* MApp *)
+       - inversion HeqHre.      (* MUnionL *)
+       - inversion HeqHre.      (* MUnionR *)
+       - inversion HeqHre. exists []. split. (* MStar0 *)
+         + simpl. reflexivity.
+         + intros. inversion H.
+       - inversion HeqHre. exists [s1;s2]. split. (* MStarApp *)
+         + simpl. symmetry. rewrite -> app_nil_r. reflexivity.
+         + intros. apply IHexp_match2 in HeqHre. destruct HeqHre as [sss [HH1 HH2]].
+           inversion H1 as [Hs1 | [Hs2 | ]].
+           { rewrite -> Hs1 in H. rewrite -> H2 in H. apply H.  }
+           (* CHX: TODO *)
   (* FILL IN HERE *) Admitted.
 (** [] *)
 
@@ -1379,8 +1486,12 @@ Qed.
 
 (** **** Exercise: 2 stars, recommended (reflect_iff)  *)
 Theorem reflect_iff : forall P b, reflect P b -> (P <-> b = true).
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. intros P [] H; inversion H; split; intros.
+       - reflexivity.
+       - apply H0.
+       - exfalso. unfold not in H0. apply H0. apply H1.
+       - inversion H1.
+Qed.
 (** [] *)
 
 (** The advantage of [reflect] over the normal "if and only if"
@@ -1415,7 +1526,7 @@ Proof.
   - (* l = [] *)
     simpl. intros H. apply H. reflexivity.
   - (* l = m :: l' *)
-    simpl. destruct (beq_natP n m) as [H | H].
+    simpl. destruct (beq_natP n m) as [H | H]. (* hypothesis becomes "n=m". *)
     + (* n = m *)
       intros _. rewrite H. left. reflexivity.
     + (* n <> m *)
@@ -1435,6 +1546,7 @@ Qed.
     reflection_, i.e., the pervasive use of reflection to simplify
     small proof steps with boolean computations. *)
 
+(* CHX: TODO *)
 (* ####################################################### *)
 (** * Additional Exercises *)
 
