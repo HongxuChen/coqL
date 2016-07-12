@@ -128,6 +128,8 @@ Inductive bexp : Type :=
 (* ####################################################### *)
 (** ** Evaluation *)
 
+(* CHX: the semantics *)
+
 (** _Evaluating_ an arithmetic expression produces a number. *)
 
 Fixpoint aeval (a : aexp) : nat :=
@@ -163,6 +165,7 @@ Fixpoint beval (b : bexp) : bool :=
     changing every occurrence of [0+e] (i.e., [(APlus (ANum 0) e])
     into just [e]. *)
 
+(* semantics; but here evaluation is not involved *)
 Fixpoint optimize_0plus (a:aexp) : aexp :=
   match a with
   | ANum n =>
@@ -196,12 +199,12 @@ Theorem optimize_0plus_sound: forall a,
 Proof.
   intros a. induction a.
   - (* ANum *) reflexivity.
-  - (* APlus *) destruct a1.
-    + (* a1 = ANum n *) destruct n.
+  - (* APlus *) destruct a1.  (* do not need to apply induction on a1! *)
+    + (* a1 = ANum n *) destruct n.  (* do not need to apply induction on n! *)
       * (* n = 0 *)  simpl. apply IHa2.
       * (* n <> 0 *) simpl. rewrite IHa2. reflexivity.
     + (* a1 = APlus a1_1 a1_2 *)
-      simpl. simpl in IHa1. rewrite IHa1.
+      simpl. simpl in IHa1. rewrite IHa1. (* although simpl introduces many cases, it can be directly elided *)
       rewrite IHa2. reflexivity.
     + (* a1 = AMinus a1_1 a1_2 *)
       simpl. simpl in IHa1. rewrite IHa1.
@@ -213,6 +216,9 @@ Proof.
     simpl. rewrite IHa1. rewrite IHa2. reflexivity.
   - (* AMult *)
     simpl. rewrite IHa1. rewrite IHa2. reflexivity.  Qed.
+
+(* CHX: do not unfold optimize_0plus here; instead induction on a (structural induction).
+ we should always avoid unfolding Fixpoint! *)
 
 (* ####################################################### *)
 (** * Coq Automation *)
@@ -374,7 +380,7 @@ Proof.
   intros a.
   induction a;
     (* Most cases follow directly by the IH *)
-    try (simpl; rewrite IHa1; rewrite IHa2; reflexivity);
+    try (simpl; rewrite IHa1; rewrite IHa2);
     (* ... or are immediate by definition *)
     try reflexivity.
   (* The interesting case is when a = APlus a1 a2. *)
@@ -423,7 +429,7 @@ Qed.
 
 Theorem In10' : In 10 [1;2;3;4;5;6;7;8;9;10].
 Proof.
-  repeat (left; reflexivity). 
+  repeat (left; reflexivity).   (* do nothing *)
   repeat (right; try (left; reflexivity)). 
 Qed.
 
@@ -443,12 +449,26 @@ Qed.
     as elegant as possible. *)
 
 Fixpoint optimize_0plus_b (b : bexp) : bexp :=
-  (* FILL IN HERE *) admit.
+  match b with
+| BTrue => BTrue
+| BFalse => BFalse
+| BEq a1 a2 => BEq (optimize_0plus a1) (optimize_0plus a2)
+| BLe a1 a2 => BLe (optimize_0plus a1) (optimize_0plus a2)
+| BNot b1 => BNot (optimize_0plus_b b1)
+| BAnd b1 b2 => BAnd (optimize_0plus_b b1) (optimize_0plus_b b2)
+  end.
 
 Theorem optimize_0plus_b_sound : forall b,
   beval (optimize_0plus_b b) = beval b.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. induction b.
+       - simpl. reflexivity.
+       - simpl. reflexivity.
+       - simpl. repeat rewrite -> optimize_0plus_sound. reflexivity.
+       - simpl. repeat rewrite -> optimize_0plus_sound. reflexivity.
+       - simpl. apply f_equal. apply IHb.
+       - simpl. rewrite -> IHb1. rewrite -> IHb2. reflexivity.
+Qed.
+         
 (** [] *)
 
 (** **** Exercise: 4 stars, optional (optimizer)  *)
@@ -457,8 +477,37 @@ Proof.
     optimizations on arithmetic and boolean expressions.  Write a more
     sophisticated optimizer and prove it correct.
 
-(* FILL IN HERE *)
-*)
+ *)
+Fixpoint optimize_it (b:bexp) :=
+  match b with
+    | BTrue => BTrue
+    | BFalse => BFalse
+    | BEq l r => BEq (optimize_0plus l) (optimize_0plus r)
+    | BLe l r => BLe (optimize_0plus l) (optimize_0plus r)
+    | BNot n => BNot (optimize_it n)
+    | BAnd n1 n2 => match n1 with
+                     | BTrue => optimize_it n2
+                     | BFalse => BFalse
+                     | _ => BAnd (optimize_it n1) (optimize_it n2)
+                   end
+  end.
+
+Theorem optimize_it_sound : forall (b:bexp), beval (optimize_it b) = beval b.
+Proof. induction b; simpl.
+       - reflexivity.
+       - reflexivity.
+       - repeat rewrite -> optimize_0plus_sound. reflexivity.
+       - repeat rewrite -> optimize_0plus_sound. reflexivity.
+       - apply f_equal. apply IHb.
+       - destruct b1; simpl; try (repeat rewrite -> optimize_0plus_sound); try (repeat rewrite -> optimize_0plus_b_sound).
+         + apply IHb2.
+         + reflexivity.
+         + rewrite -> IHb2. reflexivity.
+         + rewrite -> IHb2. reflexivity.
+         + rewrite -> IHb2. simpl in IHb1. unfold negb in *. rewrite -> IHb1. reflexivity.
+         + simpl in IHb1. rewrite -> IHb1. rewrite -> IHb2. reflexivity.
+Qed.
+    
 (** [] *)
 
 (* ####################################################### *)
@@ -630,7 +679,9 @@ Inductive aevalR : aexp -> nat -> Prop :=
   | E_AMult :  forall (e1 e2: aexp) (n1 n2 : nat),
       (e1 \\ n1) -> (e2 \\ n2) -> (AMult e1 e2) \\ (n1 * n2)
 
-  where "e '\\' n" := (aevalR e n) : type_scope.
+where "e '\\' n" := (aevalR e n) : type_scope.
+
+(* CHX: "where" syntax *)
 
 (* ####################################################### *)
 (** ** Inference Rule Notation *)
@@ -662,7 +713,7 @@ Inductive aevalR : aexp -> nat -> Prop :=
     the name of the constructor and read each of the linebreaks
     between the premises above the line and the line itself as [->].
     All the variables mentioned in the rule ([e1], [n1], etc.) are
-    implicitly bound by universal quantifiers at the beginning. (Such
+    implicitly bound by _universal quantifiers_ at the beginning. (Such
     variables are often called _metavariables_ to distinguish them
     from the variables of the language we are defining.  At the
     moment, our arithmetic expressions don't include variables, but
@@ -756,10 +807,32 @@ Qed.
 (** Write a relation [bevalR] in the same style as
     [aevalR], and prove that it is equivalent to [beval].*)
 
-(* 
-Inductive bevalR:
-(* FILL IN HERE *)
-*)
+Inductive bevalR :bexp->bool->Prop :=
+| E_BTrue:  bevalR BTrue true
+| E_BFalse: bevalR BFalse false
+| E_BEq: forall (a1 a2:aexp) (n1 n2:nat), aevalR a1 n1->aevalR a2 n2->bevalR (BEq a1 a2) (beq_nat n1 n2)
+| E_BLe: forall (a1 a2:aexp) (n1 n2:nat), aevalR a1 n1->aevalR a2 n2->bevalR (BLe a1 a2) (leb n1 n2)
+| E_BNot: forall (b:bexp) (t:bool), bevalR b t->bevalR (BNot b) (negb t)
+| E_BAnd: forall (b1 b2:bexp) (t1 t2:bool), bevalR b1 t1 -> bevalR b2 t2 -> bevalR (BAnd b1 b2) (t1&&t2) .
+
+Theorem beval_iff_bevalR : forall (b:bexp) (t:bool), beval b = t <-> bevalR b t.
+Proof. split;intros.
+       - induction H; induction b.
+         + constructor; apply aeval_iff_aevalR; reflexivity.
+         + constructor; apply aeval_iff_aevalR; reflexivity.
+         + constructor; apply aeval_iff_aevalR; reflexivity.
+         + constructor; apply aeval_iff_aevalR; reflexivity.
+         + constructor. apply IHb.
+         + constructor. apply IHb1. apply IHb2.
+       - induction H; simpl.
+         + reflexivity.
+         + reflexivity.
+         + rewrite aeval_iff_aevalR in *. subst. reflexivity.
+         + rewrite aeval_iff_aevalR in *. subst. reflexivity.
+         + apply f_equal. assumption.
+         + subst. reflexivity.
+Qed.
+
 (** [] *)
 
 End AExp.
@@ -799,7 +872,7 @@ Inductive aexp : Type :=
 
 Reserved Notation "e '\\' n"
                   (at level 50, left associativity).
-
+(* through relation definition *)
 Inductive aevalR : aexp -> nat -> Prop :=
   | E_ANum : forall (n:nat),
       (ANum n) \\ n
@@ -1030,7 +1103,9 @@ Definition fact_in_coq : com :=
   WHILE BNot (BEq (AId Z) (ANum 0)) DO
     Y ::= AMult (AId Y) (AId Z);;
     Z ::= AMinus (AId Z) (ANum 1)
-  END.
+    END.
+
+(* it only defines the syntax; unawareness of semantics. *)
 
 (* ####################################################### *)
 (** ** Examples *)
@@ -1079,6 +1154,7 @@ Definition loop : com :=
 (** Here's an attempt at defining an evaluation function for commands,
     omitting the [WHILE] case. *)
 
+(* the return value is the state! *)
 Fixpoint ceval_fun_no_while (st : state) (c : com)
                           : state :=
   match c with
@@ -1115,7 +1191,7 @@ Fixpoint ceval_fun_no_while (st : state) (c : com)
     terminate: for example, the full version of the [ceval_fun]
     function applied to the [loop] program above would never
     terminate. Since Coq is not just a functional programming
-    language, but also a consistent logic, any potentially
+    language, but also a _consistent logic_, any potentially
     non-terminating function needs to be rejected. Here is
     an (invalid!) Coq program showing what would go wrong if Coq
     allowed non-terminating recursive functions:
@@ -1130,6 +1206,7 @@ Fixpoint ceval_fun_no_while (st : state) (c : com)
     of [ceval_fun] cannot be written in Coq -- at least not without
     additional tricks (see chapter [ImpCEvalFun] if you're curious 
     about what those might be). *)
+(* CHX: TODO *)
 
 (* #################################### *)
 (** ** Evaluation as a Relation *)
@@ -1194,6 +1271,8 @@ Fixpoint ceval_fun_no_while (st : state) (c : com)
 Reserved Notation "c1 '/' st '\\' st'"
                   (at level 40, st at level 39).
 
+(* here the transition is from one state to another *)
+(* there are 3 elements so two notations should be used *)
 Inductive ceval : com -> state -> state -> Prop :=
   | E_Skip : forall st,
       SKIP / st \\ st
@@ -1204,19 +1283,19 @@ Inductive ceval : com -> state -> state -> Prop :=
       c1 / st  \\ st' ->
       c2 / st' \\ st'' ->
       (c1 ;; c2) / st \\ st''
-  | E_IfTrue : forall st st' b c1 c2,
+  | E_IfTrue : forall st st' b c1 c2, (* IF-T *)
       beval st b = true ->
       c1 / st \\ st' ->
       (IFB b THEN c1 ELSE c2 FI) / st \\ st'
-  | E_IfFalse : forall st st' b c1 c2,
+  | E_IfFalse : forall st st' b c1 c2, (* IF-F *)
       beval st b = false ->
       c2 / st \\ st' ->
       (IFB b THEN c1 ELSE c2 FI) / st \\ st'
   | E_WhileEnd : forall b st c,
-      beval st b = false ->
+      beval st b = false ->      (* WHILE-F *)
       (WHILE b DO c END) / st \\ st
   | E_WhileLoop : forall st st' st'' b c,
-      beval st b = true ->
+      beval st b = true ->       (* WHILE-T *)
       c / st \\ st' ->
       (WHILE b DO c END) / st' \\ st'' ->
       (WHILE b DO c END) / st \\ st''
@@ -1226,7 +1305,7 @@ Inductive ceval : com -> state -> state -> Prop :=
 (** The cost of defining evaluation as a relation instead of a
     function is that we now need to construct _proofs_ that some
     program evaluates to some result state, rather than just letting
-    Coq's computation mechanism do it for us. *)
+    Coq's _computation mechanism_ do it for us. *)
 
 Example ceval_example1:
     (X ::= ANum 2;;
