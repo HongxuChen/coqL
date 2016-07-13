@@ -1329,8 +1329,12 @@ Proof.
 Example ceval_example2:
     (X ::= ANum 0;; Y ::= ANum 1;; Z ::= ANum 2) / empty_state \\
     (t_update (t_update (t_update empty_state X 0) Y 1) Z 2).
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. apply E_Seq with (t_update empty_state X 0).
+       - apply E_Ass. reflexivity.
+       - apply E_Seq with (t_update (t_update empty_state X 0) Y 1).
+         + apply E_Ass. reflexivity.
+         + apply E_Ass. reflexivity.
+Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars, advanced (pup_to_n)  *)
@@ -1340,14 +1344,35 @@ Proof.
    (the latter is trickier than you might expect). *)
 
 Definition pup_to_n : com :=
-  (* FILL IN HERE *) admit.
+  Y ::= ANum 0;;
+    WHILE BNot (BLe (AId X) (ANum 0)) DO
+    Y ::= APlus (AId Y) (AId X);;
+    X ::= AMinus (AId X) (ANum 1)
+    END.
 
 Theorem pup_to_2_ceval :
   pup_to_n / (t_update empty_state X 2) \\
     t_update (t_update (t_update (t_update (t_update (t_update empty_state
       X 2) Y 0) Y 2) X 1) Y 3) X 0.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. apply E_Seq with (st':=t_update (t_update empty_state X 2) Y 0). (* st' after first 2 com. *)
+       - apply E_Ass. reflexivity.
+       (* st' after loop first round. *)
+       - apply E_WhileLoop with (st':=t_update (t_update (t_update (t_update empty_state X 2) Y 0) Y 2) X 1). reflexivity.
+         (* st' in loop first round; after Y assignment *)
+         + apply E_Seq with (st':=t_update (t_update (t_update empty_state X 2) Y 0) Y 2).
+           { apply E_Ass. reflexivity.  }
+           { apply E_Ass. reflexivity.  }
+         (* st' after loop second round. *)
+         + apply E_WhileLoop with (st':=t_update (t_update (t_update (t_update (t_update (t_update empty_state X 2) Y 0) Y 2) X 1) Y 3) X 0).
+           { reflexivity.  }
+           {
+             (* st' in loop second round; after Y assignment *)
+             apply E_Seq with (st':=t_update (t_update (t_update (t_update (t_update empty_state X 2) Y 0) Y 2) X 1) Y 3).
+             - apply E_Ass. reflexivity.
+             - apply E_Ass. reflexivity.
+           }
+           { apply E_WhileEnd. reflexivity.  }
+Qed.
 (** [] *)
 
 
