@@ -67,12 +67,15 @@ Definition classifyChar (c : ascii) : chartype :=
   else
     other.
 
+(* string is either "EmptyString" or "String c s" *)
+(* string to list of ascii *)
 Fixpoint list_of_string (s : string) : list ascii :=
   match s with
   | EmptyString => []
   | String c s => c :: (list_of_string s)
   end.
 
+(* list of ascii to string *)
 Fixpoint string_of_list (xs : list ascii) : string :=
   fold_right String EmptyString xs.
 
@@ -123,8 +126,8 @@ Inductive optionE (X:Type) : Type :=
   | SomeE : X -> optionE X
   | NoneE : string -> optionE X.
 
-Implicit Arguments SomeE [[X]].
-Implicit Arguments NoneE [[X]].
+Arguments SomeE {X} _.
+Arguments NoneE {X} _.
 
 (** Some syntactic sugar to make writing nested match-expressions on
     optionE more convenient. *)

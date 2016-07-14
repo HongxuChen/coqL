@@ -1702,6 +1702,8 @@ Theorem s_compile_correct : forall (st : state) (e : aexp),
 Proof. intros st. induction e; simpl.
        - reflexivity.
        - reflexivity.
+
+         (* CHX: TODO *)
 Admitted.
 (** [] *)
 
