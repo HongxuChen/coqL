@@ -1426,6 +1426,7 @@ Proof.
       subst st'0.
       apply IHE1_2. assumption.  Qed.
 
+(* induction on Evaluation for all evaluation rules *)
 
 (* ####################################################### *)
 (** * Reasoning About Imp Programs *)
@@ -1454,7 +1455,9 @@ Proof.
 (** **** Exercise: 3 stars, recommended (XtimesYinZ_spec)  *)
 (** State and prove a specification of [XtimesYinZ]. *)
 
-(* FILL IN HERE *)
+Theorem XtimesYinZ_comm: forall st st', st X = 0 -> XtimesYinZ / st \\ st' -> st' Z = 0.
+Proof. intros. inversion H0. subst. simpl in *. rewrite -> H in *. simpl in *. reflexivity.
+       Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars, recommended (loop_never_stops)  *)
@@ -1469,8 +1472,15 @@ Proof.
       [loopdef] terminates.  Most of the cases are immediately
       contradictory (and so can be solved in one step with
       [inversion]). *)
-
-  (* FILL IN HERE *) Admitted.
+  induction contra.
+  - inversion Heqloopdef.       (* SKIP *)
+  - inversion Heqloopdef.       (* ASSIGN *)
+  - inversion Heqloopdef.       (* SEQ *)
+  - inversion Heqloopdef.       (* IFB_T *)
+  - inversion Heqloopdef.       (* IFB_F *)
+  - inversion Heqloopdef. rewrite -> H1 in H. inversion H. (* WHILE_F *)
+  - apply IHcontra2. apply Heqloopdef.                    (* WHILE_T *)
+Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars (no_whilesR)  *)
@@ -1496,21 +1506,59 @@ Fixpoint no_whiles (c : com) : bool :=
     while loops.  Then prove its equivalence with [no_whiles]. *)
 
 Inductive no_whilesR: com -> Prop :=
- (* FILL IN HERE *)
-.
-
+| R_SKIP : no_whilesR SKIP
+| R_ASSIGN : forall a X, no_whilesR (X ::= a)
+| R_SEQ : forall c1 c2, no_whilesR c1 -> no_whilesR c2 -> no_whilesR (c1 ;; c2)
+| R_IFB : forall b ct cf, no_whilesR ct -> no_whilesR cf -> no_whilesR (IFB b THEN ct ELSE cf FI).
+                                                               
+(* since WHILE always generate false, neglect this case *)
+(* CHX: this theorem is about c itself, so induction on it! *)
 Theorem no_whiles_eqv:
    forall c, no_whiles c = true <-> no_whilesR c.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. split; intros H.
+       - induction c.
+         + constructor.
+         + constructor.
+         + inversion H. apply andb_true_iff in H1. destruct H1. apply IHc1 in H0. apply IHc2 in H1. constructor.
+           { assumption. }
+           { assumption. }
+         + inversion H. apply andb_true_iff in H1. destruct H1. apply IHc1 in H0. apply IHc2 in H1. constructor.
+           { assumption. }
+           { assumption. }
+         + inversion H.
+       - induction c.
+         + reflexivity.
+         + reflexivity.
+         + simpl. apply andb_true_iff. inversion H. subst. apply IHc1 in H2. apply IHc2 in H3. split; assumption.
+         + simpl. apply andb_true_iff. inversion H. subst. apply IHc1 in H2. apply IHc2 in H4. split; assumption.
+         + inversion H.
+
 (** [] *)
 
 (** **** Exercise: 4 stars (no_whiles_terminating)  *)
 (** Imp programs that don't involve while loops always terminate.
     State and prove a theorem [no_whiles_terminating] that says this. *)
-(** Use either [no_whiles] or [no_whilesR], as you prefer. *)
+           (** Use either [no_whiles] or [no_whilesR], as you prefer. *)
 
-(* FILL IN HERE *)
+Theorem no_whiles_terminating : forall (c:com), no_whilesR c -> forall (st:state), exists (st':state), c / st \\ st'.
+Proof. induction c.
+       - intros. exists st. constructor.
+       - intros. exists (t_update st i (aeval st a)). constructor. reflexivity.
+       - intros. inversion H. subst. apply IHc1 with (st:=st) in H2. destruct H2 as [st'' Hevalc1]. apply (IHc2) with (st:=st'') in H3. destruct H3 as [st' Hevalc2]. exists st'. apply (E_Seq c1 c2 st st'' st' Hevalc1 Hevalc2).
+       - intros. inversion H. subst. clear H. apply IHc1 with (st:=st) in H2. destruct H2 as [stT Hevalc1]. apply IHc2 with (st:=st) in H4. destruct H4 as [stF Hevalc2]. remember (beval st b) as RES_IFB.
+         destruct RES_IFB.
+         {
+           exists stT. apply E_IfTrue.
+           - symmetry. assumption.
+           -  assumption.
+         }
+         {
+           exists stF. apply E_IfFalse.
+           - symmetry. assumption.
+           - assumption.
+         }
+       - intros. inversion H.
+Qed.
 (** [] *)
 
 (* ####################################################### *)
@@ -1555,11 +1603,11 @@ Proof.
      - [SMult]:   Similar, but multiply. *)
 
 Inductive sinstr : Type :=
-| SPush : nat -> sinstr
-| SLoad : id -> sinstr
-| SPlus : sinstr
-| SMinus : sinstr
-| SMult : sinstr.
+| SPush : nat -> sinstr            (* take value into stack; with 1 param *)
+| SLoad : id -> sinstr           (* load from state into stack; with 1 param *)
+| SPlus : sinstr                (* compute from stack  into stack; 0 param *)
+| SMinus : sinstr               (* compute from stack into stack; 0 param *)
+| SMult : sinstr.               (* compute from stack into stack; 0 param *)
 
 (** Write a function to evaluate programs in the stack language. It
     should take as input a state, a stack represented as a list of
@@ -1576,35 +1624,64 @@ Inductive sinstr : Type :=
 
 Fixpoint s_execute (st : state) (stack : list nat)
                    (prog : list sinstr)
-                 : list nat :=
-(* FILL IN HERE *) admit.
+: list nat :=
+  match prog with
+    | [] => stack
+    | ph::pt => match ph with
+                 | SPush n => s_execute st (n::stack) pt
+                 | SLoad v => s_execute st ((aeval st (AId v))::stack) pt
+                 | SPlus => match stack with
+                             | [] => []
+                             | _::[] => []
+                             | n1::n2::stackt => s_execute st ((aeval st (APlus (ANum n2) (ANum n1)))::stackt) pt
+                           end
+                 | SMinus => match stack with
+                              | [] => []
+                              | n::[] => []
+                              | n1::n2::stackt => s_execute st ((aeval st (AMinus (ANum n2) (ANum n1)))::stackt) pt
+                            end
+                 | SMult =>  match stack with
+                              | [] => []
+                              | n::[] => []
+                              | n1::n2::stackt => s_execute st ((aeval st (AMult (ANum n2) (ANum n1)))::stackt) pt
+                            end
+               end
+  end.
+
+Compute (s_execute empty_state [] [SPush 5; SPush 3; SPush 1; SMinus]).
 
 Example s_execute1 :
      s_execute empty_state []
        [SPush 5; SPush 3; SPush 1; SMinus]
-   = [2; 5].
-(* FILL IN HERE *) Admitted.
+     = [2; 5].
+Proof. reflexivity. Qed.
 
 Example s_execute2 :
      s_execute (t_update empty_state X 3) [3;4]
        [SPush 4; SLoad X; SMult; SPlus]
-   = [15; 4].
-(* FILL IN HERE *) Admitted.
+     = [15; 4].
+Proof. reflexivity. Qed.
 
 (** Next, write a function that compiles an [aexp] into a stack
     machine program. The effect of running the program should be the
     same as pushing the value of the expression on the stack. *)
 
 Fixpoint s_compile (e : aexp) : list sinstr :=
-(* FILL IN HERE *) admit.
+  match e with
+    | ANum n => (SPush n)::[]
+    | AId v => (SLoad v)::[]
+    | APlus e1 e2 => (s_compile e1)++(s_compile e2)++(SPlus::[])
+    | AMinus e1 e2 => (s_compile e1)++(s_compile e2)++(SMinus::[])
+    | AMult e1 e2 => (s_compile e1)++(s_compile e2)++(SMult::[])
+  end.
 
 (** After you've defined [s_compile], prove the following to test
     that it works. *)
 
 Example s_compile1 :
     s_compile (AMinus (AId X) (AMult (ANum 2) (AId Y)))
-  = [SLoad X; SPush 2; SLoad Y; SMult; SMinus].
-(* FILL IN HERE *) Admitted.
+    = [SLoad X; SPush 2; SLoad Y; SMult; SMinus].
+Proof. reflexivity. Qed.
 (** [] *)
 
 (** **** Exercise: 4 stars, advanced (stack_compiler_correct)  *)
@@ -1622,8 +1699,10 @@ Example s_compile1 :
 
 Theorem s_compile_correct : forall (st : state) (e : aexp),
   s_execute st [] (s_compile e) = [ aeval st e ].
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. intros st. induction e; simpl.
+       - reflexivity.
+       - reflexivity.
+Admitted.
 (** [] *)
 
 (** **** Exercise: 5 stars, advanced (break_imp)  *)
