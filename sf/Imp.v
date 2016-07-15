@@ -1532,6 +1532,8 @@ Proof. split; intros H.
          + simpl. apply andb_true_iff. inversion H. subst. apply IHc1 in H2. apply IHc2 in H3. split; assumption.
          + simpl. apply andb_true_iff. inversion H. subst. apply IHc1 in H2. apply IHc2 in H4. split; assumption.
          + inversion H.
+Qed.
+
 
 (** [] *)
 
@@ -1699,11 +1701,7 @@ Proof. reflexivity. Qed.
 
 Theorem s_compile_correct : forall (st : state) (e : aexp),
   s_execute st [] (s_compile e) = [ aeval st e ].
-Proof. intros st. induction e; simpl.
-       - reflexivity.
-       - reflexivity.
-
-         (* CHX: TODO *)
+Proof.         (* CHX: TODO *)
 Admitted.
 (** [] *)
 

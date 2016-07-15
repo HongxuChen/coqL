@@ -202,14 +202,17 @@ Definition test_ceval (st:state) (c:com) :=
    your solution satisfies the test that follows. *)
 
 Definition pup_to_n : com :=
-  (* FILL IN HERE *) admit.
+  Y ::= ANum 0;;
+  WHILE BNot (BEq (AId X) (ANum 0)) DO
+  Y ::= APlus (AId Y) (AId X);;
+  X ::= AMinus (AId X) (ANum 1)
+  END
+.
 
-(* 
 Example pup_to_n_1 :
   test_ceval (t_update empty_state X 5) pup_to_n
   = Some (0, 15, 0).
 Proof. reflexivity. Qed.
-*)
 (** [] *)
 
 (** **** Exercise: 2 stars, optional (peven)  *)
@@ -217,7 +220,25 @@ Proof. reflexivity. Qed.
     sets [Z] to [1] otherwise.  Use [ceval_test] to test your
     program. *)
 
-(* FILL IN HERE *)
+Definition peven_X_Z :com :=
+  WHILE BLe (ANum 2) (AId X) DO
+        X ::= AMinus  (AId X) (ANum 2)
+  END;;
+  IFB BEq (ANum 0) (AId X)
+  THEN Z ::= ANum 0
+  ELSE Z ::= ANum 1
+  FI
+  .
+  
+
+Example peven_X_Z_1 : test_ceval (t_update empty_state X 4) peven_X_Z
+                      = Some (0, 0, 0).
+  Proof. reflexivity. Qed.
+
+Example peven_X_Z_2 : test_ceval (t_update empty_state X 5) peven_X_Z
+                      = Some (1, 0, 1).
+Proof. reflexivity. Qed.
+
 (** [] *)
 
 (* ################################################################ *)
@@ -233,19 +254,19 @@ Theorem ceval_step__ceval: forall c st st',
       c / st \\ st'.
 Proof.
   intros c st st' H.
-  inversion H as [i E].
+  inversion H as [i E].         (* same as destruct then clear *)
   clear H.
   generalize dependent st'.
   generalize dependent st.
   generalize dependent c.
-  induction i as [| i' ].
+  induction i as [| i' ].       (* CHX: !!! *)
 
   - (* i = 0 -- contradictory *)
     intros c st st' H. inversion H.
 
   - (* i = S i' *)
     intros c st st' H.
-    destruct c;
+    induction c;
            simpl in H; inversion H; subst; clear H.
       + (* SKIP *) apply E_Skip.
       + (* ::= *) apply E_Ass. reflexivity.
@@ -290,7 +311,7 @@ Proof.
     the main ideas to a human reader; do not simply transcribe the
     steps of the formal proof.
 
-(* FILL IN HERE *)
+(* CHX: TODO *)
 []
 *)
 
@@ -348,7 +369,12 @@ Theorem ceval__ceval_step: forall c st st',
 Proof.
   intros c st st' Hce.
   induction Hce.
-  (* FILL IN HERE *) Admitted.
+  - exists 1. simpl. reflexivity.
+  - exists 1. simpl. apply f_equal. rewrite -> H. reflexivity.
+  - destruct IHHce1 as [i1 IHHce1]. destruct IHHce2 as [i2 IHHce2].
+    exists (i1+i2+1).
+    (* CHX: TODO *)
+  (* FILL IN HERE *) Admitted. 
 (** [] *)
 
 Theorem ceval_and_ceval_step_coincide: forall c st st',
