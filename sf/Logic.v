@@ -1545,6 +1545,7 @@ Qed.
 Definition peirce := forall P Q: Prop,
   ((P->Q)->P)->P.
 
+(* CHX: classical! *)
 Definition double_negation_elimination := forall P:Prop,
   ~~P -> P.
 
@@ -1555,22 +1556,49 @@ Definition implies_to_or := forall P Q:Prop,
                               (P->Q) -> (~P\/Q).
 
 Theorem excluded_middle_AND_peirce : excluded_middle <-> peirce.
-Admitted.
+Proof. unfold excluded_middle. unfold peirce. unfold not. split; intros.
+       - pose proof (H P) as HPNP. destruct HPNP as [HP|HNP].
+         + assumption.
+         + apply H0. intros HP. apply HNP in HP. inversion HP.
+       - apply H with (Q:=~(P\/~P)). unfold not. intros HPP. right. intros. apply HPP; left; assumption.
+         (* CHX: what to apply! introduce evidence *)
+Qed.
 
-Theorem excluded_middle_AND_double_gegation_elimination : excluded_middle <-> double_negation_elimination.
-Proof. unfold excluded_middle. unfold double_negation_elimination. unfold not. split; intros.
-       - assert (HP : P \/ ~ P). apply H. inversion HP.
-         + apply H1.
-         + exfalso. apply H0. apply H1.
-       - intros. assert (HP : ((P->False)->False)->P). apply H. assert (HNP : ((~P->False)->False)->(~P)).
-         apply H. unfold not in *. right. apply HNP. intros. apply H0. intros. apply H0. apply HNP.
-Admitted.
+Theorem excluded_middle_AND_double_ngegation_elimination : excluded_middle <-> double_negation_elimination.
+Proof. unfold excluded_middle. unfold double_negation_elimination. split; intros.
+       - pose proof (H P) as HPNP. destruct HPNP as [HP | HNP].
+         + assumption.
+         + exfalso. apply H0. assumption.
+       - unfold not in *. apply H. intros HPP. apply HPP. right. intros HP. apply HPP. left. assumption.
+Qed.
 
 Theorem excluded_middle_AND_de_morgan_not_and_not : excluded_middle <-> de_morgan_not_and_not.
-Admitted.
+Proof. unfold excluded_middle. unfold de_morgan_not_and_not. unfold not.  split; intros.
+       - pose proof (H P) as HPNP. destruct HPNP.
+         + left. assumption.
+         + pose proof (H Q) as HQNQ. destruct HQNQ.
+           * right. assumption.
+           * pose (conj H1 H2) as HPQ. apply H0 in HPQ. inversion HPQ.
+       - apply H. intros H'. destruct H'. apply H1. assumption.
+Qed.
 
 Theorem excluded_middle_AND_implies_to_or : excluded_middle <-> implies_to_or.
-Admitted.
+Proof. unfold excluded_middle. unfold implies_to_or. unfold not. split; intros.
+       - pose proof (H P) as HP. destruct HP as [HP|HNP].
+         + right. apply H0. assumption.
+         + left. assumption.
+       - pose (H P P) as HPP. apply or_commut. apply HPP. intros. assumption.
+Qed.
+
+(**
+
+- classic:          ~~P->P
+- excluded middle:  P\/~P
+- de morgan:        ~(~P /\ ~Q) -> P\/Q
+- peirce:           (P->(P->Q))->P
+- implies:          (P->Q) -> (~P\/Q)
+
+ *)
 
 (** [] *)
 
