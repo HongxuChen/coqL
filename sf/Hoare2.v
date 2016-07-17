@@ -237,15 +237,15 @@ These decorations were constructed as follows:
 
    {{ True }}
   IFB X <= Y THEN
-      {{                         }} ->>
-      {{                         }}
+      {{  True /\ X <= Y         }} ->>
+      {{  0 <= Y - X             }}
     Z ::= Y - X
-      {{                         }}
+      {{  Z = Y - X              }}
   ELSE
-      {{                         }} ->>
-      {{                         }}
+      {{  True /\ Y < X          }} ->>
+      {{  True                   }}
     Y ::= X + Z
-      {{                         }}
+      {{  Y = X + Z              }}
   FI
     {{ Y = X + Z }}
 
@@ -309,11 +309,11 @@ Proof.
     intros st [Inv GuardFalse].
     unfold bassn in GuardFalse. simpl in GuardFalse.
     (* SearchAbout helps to find the right lemmas *)
-    SearchAbout [not true].
+    Search not true.
     rewrite not_true_iff_false in GuardFalse.
-    SearchAbout [negb false].
+    Search negb false.
     rewrite negb_false_iff in GuardFalse.
-    SearchAbout [beq_nat true].
+    Search beq_nat true.
     apply beq_nat_true in GuardFalse.
     apply GuardFalse. Qed.
 
