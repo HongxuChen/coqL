@@ -7,6 +7,7 @@ Require Import Coq.omega.Omega.
 Require Import SfLib.
 Require Import Imp.
 Require Import Maps.
+
 (* /TERSE: HIDEFROMHTML *)
 
 (** In the past couple of chapters, we've begun applying the
@@ -105,7 +106,6 @@ Definition as4 : Assertion :=
             ~ (((S (st Z)) * (S (st Z))) <= st X).
 Definition as5 : Assertion := fun st => True.
 Definition as6 : Assertion := fun st => False.
-(* FILL IN HERE *)
 End ExAssertions.
 (** [] *)
 
@@ -212,29 +212,30 @@ Notation "{{ P }}  c  {{ Q }}" :=
 
 (** [] *)
 
+(* CHX: ??? TODO *)
 (** **** Exercise: 1 star, optional (valid_triples)  *)
 (** Which of the following Hoare triples are _valid_ -- i.e., the
     claimed relation between [P], [c], and [Q] is true?
 
-   1) {{True}} X ::= 5 {{X = 5}}
+   1)+ {{True}} X ::= 5 {{X = 5}}
 
-   2) {{X = 2}} X ::= X + 1 {{X = 3}}
+   2)+ {{X = 2}} X ::= X + 1 {{X = 3}}
 
-   3) {{True}} X ::= 5; Y ::= 0 {{X = 5}}
+   3)- {{True}} X ::= 5; Y ::= 0 {{X = 5}}
 
-   4) {{X = 2 /\ X = 3}} X ::= 5 {{X = 0}}
+   4)+ {{X = 2 /\ X = 3}} X ::= 5 {{X = 0}}
 
-   5) {{True}} SKIP {{False}}
+   5)- {{True}} SKIP {{False}}
 
-   6) {{False}} SKIP {{True}}
+   6)+ {{False}} SKIP {{True}}
 
-   7) {{True}} WHILE True DO SKIP END {{False}}
+   7)- {{True}} WHILE True DO SKIP END {{False}}
 
-   8) {{X = 0}}
+   8)+ {{X = 0}}
       WHILE X == 0 DO X ::= X + 1 END
       {{X = 1}}
 
-   9) {{X = 1}}
+   9)- {{X = 1}}
       WHILE X <> 0 DO X ::= X + 1 END
       {{X = 100}}
 
@@ -249,22 +250,23 @@ Notation "{{ P }}  c  {{ Q }}" :=
    To get us warmed up for what's coming, here are two simple
    facts about Hoare triples. *)
 
+(* For post-condition *)
 Theorem hoare_post_true : forall (P Q : Assertion) c,
   (forall st, Q st) ->
   {{P}} c {{Q}}.
 Proof.
-  intros P Q c H. unfold hoare_triple.
-  intros st st' Heval HP.
-  apply H.  Qed.
+  intros P Q c Hst. unfold hoare_triple. intros st st' Hss' Ps.
+  apply Hst.
+Qed.
 
+(* For pre-condition *)
 Theorem hoare_pre_false : forall (P Q : Assertion) c,
   (forall st, ~(P st)) ->
   {{P}} c {{Q}}.
 Proof.
-  intros P Q c H. unfold hoare_triple.
-  intros st st' Heval HP.
-  unfold not in H. apply H in HP.
-  inversion HP.  Qed.
+  intros P Q HP Hst. unfold hoare_triple. intros st st' Hss' HPs.
+  pose proof (Hst st) as HNPs. unfold not in HNPs. apply HNPs in HPs. inversion HPs.
+  Qed.
 
 (* ####################################################### *)
 (** * Proof Rules *)
@@ -319,6 +321,7 @@ Proof.
 
     where "[Q [X |-> a]]" is pronounced "[Q] where [a] is substituted
     for [X]".
+(* CHX: the order is reverse! *)
 
     For example, these are valid applications of the assignment
     rule:
@@ -366,6 +369,8 @@ Notation "P [ X |-> a ]" := (assn_sub X a P) (at level 10).
     of examples.  First, suppose [P'] is [(X <= 5) [X |-> 3]] -- that
     is, more formally, [P'] is the Coq expression
 
+(* beta-expansion *)
+
     fun st =>
       (fun st' => st' X <= 5)
       (t_update st X (aeval st (ANum 3))),
@@ -377,6 +382,7 @@ Notation "P [ X |-> a ]" := (assn_sub X a P) (at level 10).
       (t_update st X 3)
 
     and further simplifies to
+(* beta-contraction *)
 
     fun st =>
       ((t_update st X 3) X) <= 5)
@@ -420,11 +426,9 @@ Notation "P [ X |-> a ]" := (assn_sub X a P) (at level 10).
 
 Theorem hoare_asgn : forall Q X a,
   {{Q [X |-> a]}} (X ::= a) {{Q}}.
-Proof.
-  unfold hoare_triple.
-  intros Q X a st st' HE HQ.
-  inversion HE. subst.
-  unfold assn_sub in HQ. assumption.  Qed.
+Proof. intros Q X a. unfold hoare_triple. intros st st' Hcss' Hsub.
+       unfold assn_sub in Hsub. inversion Hcss'; subst. assumption.
+       Qed.
 
 (** Here's a first formal proof using this rule. *)
 
@@ -449,11 +453,22 @@ Proof.
    ...into formal statements (use the names [assn_sub_ex1] 
    and [assn_sub_ex2]) and use [hoare_asgn] to prove them. *)
 
-(* FILL IN HERE *)
+Example assn_sub_ex1 :
+  {{ (fun st => st X <= 5) [X |-> APlus (AId X) (ANum 1)] }}
+                      X ::= APlus (AId X) (ANum 1)
+                      {{fun st => st X <= 5}}.
+Proof. apply hoare_asgn. Qed.
+
+Example assn_sub_ex2 :
+  {{ (fun st => 0 <= (st X) /\ (st X) <= 5) [X |-> (ANum 3)]}}
+    X ::= (ANum 3)
+    {{ fun st => 0 <= (st X) /\ (st X) <= 5}}.
+Proof. apply hoare_asgn. Qed.
+
 (** [] *)
 
 (** **** Exercise: 2 stars (hoare_asgn_wrong)  *)
-(** The assignment rule looks backward to almost everyone the first
+(** The assignment rule looks _backward_ to almost everyone the first
     time they see it.  If it still seems puzzling, it may help
     to think a little about alternative "forward" rules.  Here is a
     seemingly natural one:
@@ -467,7 +482,7 @@ Proof.
     [a], and your counterexample needs to exhibit an [a] for which 
     the rule doesn't work.) *)
 
-(* FILL IN HERE *)
+(* CHX: a == -X??? *)
 (** [] *)
 
 (** **** Exercise: 3 stars, advanced (hoare_asgn_fwd)  *)
@@ -498,7 +513,13 @@ Theorem hoare_asgn_fwd :
             /\ st X = aeval (t_update st X m) a }}.
 Proof.
   intros functional_extensionality m a P.
-  (* FILL IN HERE *) Admitted.
+  unfold hoare_triple. intros st st' Hcss' HPs_stX. destruct HPs_stX as [HPs HstX]. inversion Hcss'; subst. rewrite -> t_update_shadow. rewrite -> t_update_same. split.
+  - assumption.
+  - apply t_update_eq.
+Qed.
+
+(* CHX: functional_extensionality ??? when to accept *)
+
 (** [] *)
 
 (** **** Exercise: 2 stars, advanced (hoare_asgn_fwd_exists)  *)
@@ -524,7 +545,12 @@ Theorem hoare_asgn_fwd_exists :
                 st X = aeval (t_update st X m) a }}.
 Proof.
   intros functional_extensionality a P.
-  (* FILL IN HERE *) Admitted.
+  unfold hoare_triple. intros st st' Hcss' HPs. exists (aeval st (AId X)).
+  inversion Hcss'; subst. rewrite -> t_update_shadow. rewrite -> t_update_same. split.
+  - assumption.
+  - rewrite -> t_update_eq. reflexivity.
+Qed.
+
 (** [] *)
 
 (* ####################################################### *)
@@ -533,7 +559,7 @@ Proof.
 (** Sometimes the preconditions and postconditions we get from the
     Hoare rules won't quite be the ones we want in the particular
     situation at hand -- they may be logically equivalent but have a
-    different syntactic form that fails to unify with the goal we are
+    _different syntactic form_ that fails to unify with the goal we are
     trying to prove, or they actually may be logically weaker (for
     preconditions) or stronger (for postconditions) than what we need.
     For instance, while
@@ -547,7 +573,7 @@ Proof.
     does not.  This triple is valid, but it is not an instance of
     [hoare_asgn] because [True] and [(X = 3) [X |-> 3]] are not
     syntactically equal assertions.  However, they are logically
-    equivalent, so if one triple is valid, then the other must
+    _equivalent_, so if one triple is valid, then the other must
     certainly be as well.  We can capture this observation with the
     following rule:
 
@@ -557,7 +583,7 @@ Proof.
                 {{P}} c {{Q}}
 
     Taking this line of thought a bit further, we can see that
-    strengthening the precondition or weakening the postcondition of a
+    _strengthening the precondition_ or _weakening the postcondition_ of a
     valid triple always produces another valid triple. This
     observation is captured by two _Rules of Consequence_.
 
@@ -580,9 +606,11 @@ Theorem hoare_consequence_pre : forall (P P' Q : Assertion) c,
   P ->> P' ->
   {{P}} c {{Q}}.
 Proof.
-  intros P P' Q c Hhoare Himp.
-  intros st st' Hc HP. apply (Hhoare st st').
-  assumption. apply Himp. assumption. Qed.
+  intros P P' Q c Hhoare Himp. unfold hoare_triple in Hhoare.
+  intros st st' Hc HP. unfold assert_implies in Himp. apply (Hhoare st st').
+  - assumption.
+  - apply Himp. assumption.
+Qed.
 
 Theorem hoare_consequence_post : forall (P Q Q' : Assertion) c,
   {{P}} c {{Q'}} ->
@@ -747,6 +775,8 @@ Proof.
   intros P Q HP HQ. destruct HP as [y HP']. eapply HQ. eassumption.
 Qed.
 
+(* CHX: get "eassumption" *)
+
 (** **** Exercise: 2 stars (hoare_asgn_examples_2)  *)
 (** Translate these informal Hoare triples...
 
@@ -811,6 +841,8 @@ Proof.
     postcondition) and push postconditions backwards through commands
     until we reach the beginning. *)
 
+(* CHX: backward *)
+
 (** Informally, a nice way of displaying a proof using the sequencing
     rule is as a "decorated program" where the intermediate assertion
     [Q] is written between [c1] and [c2]:
@@ -834,7 +866,7 @@ Proof.
   intros a n. eapply hoare_seq.
   - (* right part of seq *)
     apply hoare_skip.
-  - (* left part of seq *)
+  - (* left part of seq *) (*<-- extensional variable has been instantiated*)
     eapply hoare_consequence_pre. apply hoare_asgn.
     intros st H. subst. reflexivity. 
 Qed.
@@ -854,13 +886,18 @@ Qed.
     Y ::= 2
                    {{ X = 1 /\ Y = 2 }}
 
-*)
+ *)
+
 
 Example hoare_asgn_example4 :
   {{fun st => True}} (X ::= (ANum 1);; Y ::= (ANum 2))
   {{fun st => st X = 1 /\ st Y = 2}}.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. eapply hoare_seq.
+       - eapply hoare_asgn.
+       - eapply hoare_consequence_pre.
+         + apply hoare_asgn.  (* CHX: don't care Y, Q=[Y|->ANum 2] is a postcondition *)
+         + unfold assert_implies. intros st _. unfold assn_sub. simpl. split; reflexivity.
+Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars (swap_exercise)  *)
@@ -872,14 +909,34 @@ Proof.
 *)
 
 Definition swap_program : com :=
-  (* FILL IN HERE *) admit.
+  Z ::= AId X;;
+  X ::= AId Y;;
+  Y ::= AId Z
+.
 
-Theorem swap_exercise :
-  {{fun st => st X <= st Y}}
-  swap_program
-  {{fun st => st Y <= st X}}.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Theorem swap_exercise : {{fun st => st X <= st Y}} swap_program {{fun st => st Y <= st X}}.
+Proof. eapply hoare_seq.
+       - eapply hoare_seq.
+         + apply hoare_asgn.
+         + apply hoare_asgn.
+       - eapply hoare_consequence_pre.
+         + apply hoare_asgn.
+         + unfold assert_implies. intros st H_X_le_Y. unfold assn_sub.
+           remember (t_update st Z (aeval st (AId X))) as st'.
+           remember (t_update st' X (aeval st' (AId Y))) as st''.
+           assert (Hst''Z : st'' Z = st X). (* about st X *)
+           {
+             rewrite -> Heqst' in Heqst''. simpl in Heqst''. rewrite -> Heqst''. unfold t_update.
+             simpl. reflexivity.
+           }
+           assert (Hst''X : st'' X = st Y). (* about st Y *)
+           {
+             rewrite -> Heqst' in Heqst''. simpl in Heqst''. rewrite -> Heqst''. unfold t_update.
+             rewrite <- beq_id_refl. reflexivity.
+           }
+           unfold t_update. simpl. rewrite -> Hst''X. rewrite -> Hst''Z. assumption.
+Qed.
+                        
 (** [] *)
 
 (** **** Exercise: 3 stars (hoarestate1)  *)
@@ -890,7 +947,8 @@ Proof.
          (X ::= (ANum 3);; Y ::= a)
          {{fun st => st Y = n}}.
 
-*)
+ *)
+(* counterexample: X=0; a=X+3; Y=6. *)
 
 (* FILL IN HERE *)
 (** [] *)
@@ -1004,12 +1062,12 @@ Proof.
   - (* Then *)
     eapply hoare_consequence_pre. apply hoare_asgn.
     unfold bassn, assn_sub, t_update, assert_implies.
-    simpl. intros st [_ H].
+    simpl. intros st [_ H].     (* destruct conjunction *)
     apply beq_nat_true in H.
     rewrite H. omega.
   - (* Else *)
     eapply hoare_consequence_pre. apply hoare_asgn.
-    unfold assn_sub, t_update, assert_implies.
+    unfold assn_sub, t_update, assert_implies. (* unfold many *)
     simpl; intros st _. omega.
 Qed.
 
@@ -1023,8 +1081,17 @@ Theorem if_minus_plus :
     ELSE (Y ::= APlus (AId X) (AId Z))
   FI
   {{fun st => st Y = st X + st Z}}.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. apply hoare_if.
+       - eapply hoare_consequence_pre. apply hoare_asgn.
+         unfold bassn, assn_sub, t_update, assert_implies.
+         simpl. intros st [_ HXY].
+         apply leb_complete in HXY.
+         assert (H_Y_X : 0 <= st Y - st X) by omega.
+         rewrite -> plus_comm. omega.
+       - eapply hoare_consequence_pre. apply hoare_asgn.
+         unfold bassn, assn_sub, assert_implies, t_update.
+         simpl. intros st [_ HXY]. reflexivity.
+Qed.
 
 (* ####################################################### *)
 (** *** Exercise: One-sided conditionals *)
