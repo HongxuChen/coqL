@@ -21,7 +21,7 @@ Require Import Stlc.
 (** As we saw in exercise [stlc_arith] at the end of the [StlcProp]
     chapter, adding types, constants, and primitive operations for
     numbers is easy -- basically just a matter of combining the
-    [Types} and \CHAP{Stlc] chapters. *)
+    [Types] and [Stlc] chapters. *)
 
 (** ** Let Bindings *)
 
@@ -281,6 +281,7 @@ Require Import Stlc.
     construct (a very simplified form of Coq's [match]) to destruct
     them. For example, the following procedure converts a [Nat+Bool]
     into a [Nat]: *)
+
 (** <<
     getNat =
       \x:Nat+Bool.

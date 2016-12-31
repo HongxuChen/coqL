@@ -345,7 +345,7 @@ Definition tseq t1 t2 :=
     bodies.  Since function abstractions are values, the two [let]s are
     executed simply by binding these functions to the names [incc] and
     [decc], rather than by actually incrementing or decrementing [c].
-    Later, each caddll to one of these functions results in its body
+    Later, each call to one of these functions results in its body
     being executed once and performing the appropriate mutation on
     [c].  Such functions are often called _thunks_.
 
@@ -512,7 +512,7 @@ would it behave the same? *)
     appears when we consider how to formalize their operational
     behavior.  One way to see why is to ask, "What should be the
     _values_ of type [Ref T]?"  The crucial observation that we need
-    to take into account is that reduci a [ref] operator should
+    to take into account is that reducing a [ref] operator should
     _do_ something -- namely, allocate some storage -- and the result
     of the operation should be a reference to this storage.
 

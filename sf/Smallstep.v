@@ -199,7 +199,10 @@ Example test_step_2 :
           (C 2)
           (C (0 + 3))).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  simpl.
+  apply ST_Plus2. apply ST_Plus2. apply ST_PlusConstConst.
+Qed.
+
 (** [] *)
 
 End SimpleArith1.
@@ -269,22 +272,18 @@ Proof.
   unfold deterministic. intros x y1 y2 Hy1 Hy2.
   generalize dependent y2.
   induction Hy1; intros y2 Hy2.
-    - (* ST_PlusConstConst *) inversion Hy2.
-      + (* ST_PlusConstConst *) reflexivity.
-      + (* ST_Plus1 *) inversion H2.
-      + (* ST_Plus2 *) inversion H2.
-    - (* ST_Plus1 *) inversion Hy2.
-      + (* ST_PlusConstConst *) rewrite <- H0 in Hy1. inversion Hy1.
-      + (* ST_Plus1 *)
-        rewrite <- (IHHy1 t1'0).
-        reflexivity. assumption.
-      + (* ST_Plus2 *) rewrite <- H in Hy1. inversion Hy1.
-    - (* ST_Plus2 *) inversion Hy2.
-      + (* ST_PlusConstConst *) rewrite <- H1 in Hy1. inversion Hy1.
-      + (* ST_Plus1 *) inversion H2.
-      + (* ST_Plus2 *)
-        rewrite <- (IHHy1 t2'0).
-        reflexivity. assumption.
+  - inversion Hy2.
+    + reflexivity.
+    + inversion H2.
+    + inversion H2.
+  - inversion Hy2.
+    + rewrite <- H0 in Hy1. inversion Hy1.
+    + rewrite <- (IHHy1 t1'0). reflexivity. assumption.
+    + rewrite <- H in Hy1. inversion Hy1.
+  - inversion Hy2.
+    + rewrite <- H1 in Hy1. inversion Hy1.
+    + inversion H2.
+    + rewrite <- (IHHy1 t2'0). reflexivity. assumption.
 Qed.
 
 (** There is some annoying repetition in this proof.  Each use of
@@ -428,7 +427,14 @@ Inductive step : tm -> tm -> Prop :=
 Theorem step_deterministic :
   deterministic step.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  unfold deterministic. intros x y1 y2 Hy1 Hy2. generalize dependent y2.
+  induction Hy1; intros y2 Hy2; inversion Hy2; subst; try (solve by inversion).
+  - reflexivity.
+  - apply IHHy1 in H2. rewrite -> H2. reflexivity.
+  - destruct H1. inversion Hy1.
+  - inversion H. rewrite <- H0 in H3. inversion H3.
+  - apply IHHy1 in H4. rewrite -> H4. reflexivity.
+Qed.    
 (** [] *)
 
 (* ########################################################### *)
@@ -949,7 +955,8 @@ Proof.
 Lemma test_multistep_2:
   C 3 ==>* C 3.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  apply multi_refl.
+Qed.
 (** [] *)
 
 (** **** Exercise: 1 star, optional (test_multistep_3)  *)
@@ -958,7 +965,7 @@ Lemma test_multistep_3:
    ==>*
       P (C 0) (C 3).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  apply multi_refl. Qed.
 (** [] *)
 
 (** **** Exercise: 2 stars (test_multistep_4)  *)

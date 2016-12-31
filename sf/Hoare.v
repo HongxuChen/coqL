@@ -104,7 +104,7 @@ Definition as3 : Assertion :=
 Definition as4 : Assertion :=
   fun st => st Z * st Z <= st X /\
             ~ (((S (st Z)) * (S (st Z))) <= st X).
-Definition as5 : Assertion := fun st => True.
+Definition as5 : Assertion := fun st => True. 
 Definition as6 : Assertion := fun st => False.
 End ExAssertions.
 (** [] *)

@@ -232,8 +232,7 @@ Lemma wp_is_weakest: forall c Q P',
 Lemma bassn_eval_false : forall b st, ~ bassn b st -> beval st b = false.
 Proof.
   intros b st H. unfold bassn in H. destruct (beval st b).
-    exfalso. apply H. reflexivity.
-    reflexivity.
+  destruct H. reflexivity. reflexivity.
 Qed.
 (** [] *)
 

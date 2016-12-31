@@ -413,19 +413,19 @@ Require Import Types.
     are then true?  Write _true_ or _false_ after each one.
     ([A], [B], and [C] here are base types.)
 
-    - [T->S <: T->S]
+    - [T->S <: T->S]  true
 
-    - [Top->U <: S->Top]
+    - [Top->U <: S->Top]  true
 
-    - [(C->C) -> (A*B)  <:  (C->C) -> (Top*B)]
+    - [(C->C) -> (A*B)  <:  (C->C) -> (Top*B)]  true
 
-    - [T->T->U <: S->S->V]
+    - [T->T->U <: S->S->V]  false
 
-    - [(T->T)->U <: (S->S)->V]
+    - [(T->T)->U <: (S->S)->V]  false
 
-    - [((T->S)->T)->U <: ((S->T)->S)->V]
+    - [((T->S)->T)->U <: ((S->T)->S)->V]  true
 
-    - [S*V <: T*U]
+    - [S*V <: T*U]  true
 
 [] *)
 
@@ -945,7 +945,12 @@ Lemma sub_inversion_Bool : forall U,
 Proof with auto.
   intros U Hs.
   remember TBool as V.
-  (* FILL IN HERE *) Admitted.
+  induction Hs; subst.
+  - reflexivity.
+  - assert (TBEq : TBool = TBool). reflexivity. apply IHHs2 in TBEq. specialize (IHHs1 TBEq). rewrite -> IHHs1. assumption.
+  - inversion HeqV.
+  - inversion HeqV.
+Qed.
 
 (** **** Exercise: 3 stars, optional (sub_inversion_arrow)  *)
 Lemma sub_inversion_arrow : forall U V1 V2,
@@ -956,6 +961,11 @@ Proof with eauto.
   intros U V1 V2 Hs.
   remember (TArrow V1 V2) as V.
   generalize dependent V2. generalize dependent V1.
+  induction Hs; subst; intros.
+  - exists V1. exists V2. split.
+    + assumption.
+    + split. auto. auto.
+  -
   (* FILL IN HERE *) Admitted.
 (** [] *)
 
@@ -993,6 +1003,7 @@ Lemma canonical_forms_of_arrow_types : forall Gamma s T1 T2,
   exists x, exists S1, exists s2,
      s = tabs x S1 s2.
 Proof with eauto.
+  intros.
   (* FILL IN HERE *) Admitted.
 (** [] *)
 
